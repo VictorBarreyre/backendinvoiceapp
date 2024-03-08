@@ -20,7 +20,7 @@ app.use(express.json()); // tell the server to accept the json data from fronten
 app.use("/email", emailRoutes);
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.send("The Backend of my Invoice App");
 });
 
 const PORT = process.env.PORT;
