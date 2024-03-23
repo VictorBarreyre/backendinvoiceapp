@@ -1,29 +1,35 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const emailRoutes = require("./routes/emailRoutes");
+const paiementRoutes = require('./routes/paiementRoutes');
+const mongoose = require('mongoose'); // Importez mongoose
+const cors = require('cors')
 
-const app = express();
 dotenv.config();
 
-const cors = require("cors");
-const corsOptions = {
-  origin: "*",
-  credentials: true, //access-control-allow-credentials:true
-  optionSuccessStatus: 200,
-};
+const app = express();
 
-app.use(cors()); // Use this after the variable declaration
+app.use(express.json());
+app.use(cors());
 
-app.use(express.json()); // tell the server to accept the json data from frontend
-
-//Signup and login
+// Routes
 app.use("/email", emailRoutes);
+app.use("/paiement", paiementRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("The Backend of my Invoice App");
 });
 
-const PORT = process.env.PORT;
+// Utilisez mongoose pour connecter à MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("Connected to MongoDB successfully"))
+.catch(err => console.error("Failed to connect to MongoDB", err));
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
