@@ -22,53 +22,70 @@ let transporter = nodemailer.createTransport({
 // Configuration de Multer pour le stockage en mémoire
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Fonction d'envoi d'email
-const sendEmail = expressAsyncHandler(async (req, res) => {
-  const { email, subject, message, montant, emetteur, destinataire } = req.body; // Assurez-vous que les données de la facture sont incluses dans la requête
-  const file = req.file; // Accède au fichier envoyé
+// Générer un ID de facture unique
+const generateFactureId = expressAsyncHandler(async (req, res) => {
+  const factureId = uuidv4(); // Générer un ID unique pour la facture
+  res.send({ factureId: factureId }); // Retourner l'ID au client
+});
 
-  // Générez un ID unique pour la facture
-  const factureId = uuidv4();
+// Fonction d'envoi d'email et de création de facture
+const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
+  const { email, subject, message, montant, factureId } = req.body; // factureId doit être fourni par le client
+  const emetteur = JSON.parse(req.body.emetteur);
+  const destinataire = JSON.parse(req.body.destinataire);
+  const file = req.file;
 
-  // Créez et sauvegardez une nouvelle facture dans votre base de données
   try {
+    // Créer et sauvegarder une nouvelle facture dans la base de données
     const nouvelleFacture = new Facture({
       factureId,
       montant,
-      status: 'en attente', // ou tout autre statut initial
-      emetteur, // Assurez-vous que ces objets correspondent à la structure de votre modèle
+      status: 'en attente',
+      emetteur,
       destinataire,
     });
 
     await nouvelleFacture.save();
     console.log("Facture créée avec succès:", nouvelleFacture);
 
+    console.log("blaze de l'emetteur : ", emetteur )
+
+    console.log("blaze du destinataire : ", destinataire )
+
+    
+
     if (!file) {
       return res.status(400).send("Aucun fichier fourni.");
     }
 
+    // Configurer les options d'e-mail
     const mailOptions = {
-      from: process.env.SMTP_MAIL, // Expéditeur
-      to: email, // Destinataire
-      subject: subject, // Sujet
-      text: message, // Corps du texte
+      from: process.env.SMTP_MAIL,
+      to: email,
+      subject: subject,
+      text: message,
       attachments: [
         {
           filename: file.originalname,
-          content: file.buffer, // Utilise `buffer` car Multer stocke le fichier en mémoire
+          content: file.buffer,
         },
       ],
     };
 
+    // Envoyer l'email
     await transporter.sendMail(mailOptions);
     res.send({
       message: "Email envoyé avec succès à " + email,
-      factureId:factureId,});
+      factureId: factureId,
+    });
   } catch (error) {
     console.error("Erreur lors de la création de la facture ou de l'envoi de l'email:", error);
     res.status(500).send("Erreur lors de la création de la facture ou de l'envoi de l'email: " + error.message);
   }
 });
 
-// Exportation de la fonction avec le middleware Multer appliqué
-module.exports = { sendEmail: [upload.single('file'), sendEmail] };
+// Ajoutez ces deux routes à votre application Express, par exemple :
+// app.post('/generateFactureId', generateFactureId);
+// app.post('/sendEmail', [upload.single('file'), createFactureAndSendEmail]);
+
+module.exports = { generateFactureId, createFactureAndSendEmail };

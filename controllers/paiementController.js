@@ -5,11 +5,16 @@ const Facture = require('../models/Facture'); // Assurez-vous que le chemin vers
 const createPaymentIntent = async (req, res) => {
   try {
     const { amount, currency, emetteur, destinataire } = req.body;
+    
 
     // Créez un PaymentIntent avec Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: currency || "eur",
+      metadata: {
+        emetteur: emetteur,
+        destinataire: destinataire,
+      },
      // Stockez l'ID de la facture dans les métadonnées pour référence
     });
 
