@@ -34,11 +34,13 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
   const file = req.file;
+  
 
   try {
     // Créer et sauvegarder une nouvelle facture dans la base de données
     const nouvelleFacture = new Facture({
       factureId,
+      urlImage: 'URL_de_votre_miniature',
       montant,
       status: 'en attente',
       emetteur,
@@ -88,6 +90,7 @@ const getFactureDetails = expressAsyncHandler(async (req, res) => {
     // Envoyer les détails de la facture au client
     res.json({
       factureId: facture.factureId,
+      urlImage: facture.urlImage,
       montant: facture.montant,
       emetteur: facture.emetteur,
       destinataire: facture.destinataire,

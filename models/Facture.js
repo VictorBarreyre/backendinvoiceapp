@@ -6,6 +6,10 @@ const factureSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  urlImage: {
+    type: String,
+    required: false, 
+  },
   montant: {
     type: Number,
     required: true,
