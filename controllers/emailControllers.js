@@ -47,11 +47,6 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
 
     await nouvelleFacture.save();
     console.log("Facture créée avec succès:", nouvelleFacture);
-
-    console.log("blaze de l'emetteur : ", emetteur )
-
-    console.log("blaze du destinataire : ", destinataire )
-
     
 
     if (!file) {
@@ -84,8 +79,28 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
   }
 });
 
-// Ajoutez ces deux routes à votre application Express, par exemple :
-// app.post('/generateFactureId', generateFactureId);
-// app.post('/sendEmail', [upload.single('file'), createFactureAndSendEmail]);
 
-module.exports = { generateFactureId, createFactureAndSendEmail };
+const getFactureDetails = expressAsyncHandler(async (req, res) => {
+  const { factureId } = req.params; // Récupérer l'ID de la facture depuis les paramètres d'URL
+  const facture = await Facture.findOne({ factureId: factureId });
+  
+  if (facture) {
+    // Envoyer les détails de la facture au client
+    res.json({
+      factureId: facture.factureId,
+      montant: facture.montant,
+      emetteur: facture.emetteur,
+      destinataire: facture.destinataire,
+      status: facture.status,
+    });
+
+  } else {
+    res.status(404).send("Facture non trouvée");
+  }
+});
+
+
+
+
+
+module.exports = { generateFactureId, createFactureAndSendEmail, getFactureDetails };

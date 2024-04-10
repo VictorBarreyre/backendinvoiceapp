@@ -20,14 +20,14 @@ const factureSchema = new mongoose.Schema({
     default: Date.now,
   },
   emetteur: {
-    nom: String,
+    name: String,
     adresse: String,
     siret: String,
     email: String,
     iban: String,
   },
   destinataire: {
-    nom: String,
+    name: String,
     adresse: String,
     siret: String,
     email: String,
