@@ -3,44 +3,90 @@ const expressAsyncHandler = require("express-async-handler");
 const dotenv = require("dotenv");
 const nodemailer = require("nodemailer");
 const multer = require('multer');
-const Facture = require('../models/Facture'); // Assurez-vous que le chemin vers votre modèle est correct
+const Facture = require('../models/Facture');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { exec } = require('child_process');
 
 dotenv.config();
 
-// Configuration de Nodemailer
 let transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
-  secure: false, // Utilisez `true` pour le port 465, `false` pour d'autres ports
+  secure: false,
   auth: {
-    user: process.env.SMTP_MAIL, // Votre adresse email
-    pass: process.env.SMTP_PASSWORD, // Votre mot de passe email
+    user: process.env.SMTP_MAIL,
+    pass: process.env.SMTP_PASSWORD,
   },
 });
 
-// Configuration de Multer pour le stockage en mémoire
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Générer un ID de facture unique
+const imagesDir = path.join(__dirname, '../public/images');
+
+const saveBufferToFile = (buffer, originalName) => {
+  return new Promise((resolve, reject) => {
+    const tempPath = path.join(os.tmpdir(), `${uuidv4()}-${originalName}`);
+    fs.writeFile(tempPath, buffer, (err) => {
+      if (err) reject(err);
+      else resolve(tempPath);
+    });
+  });
+};
+
 const generateFactureId = expressAsyncHandler(async (req, res) => {
-  const factureId = uuidv4(); // Générer un ID unique pour la facture
-  res.send({ factureId: factureId }); // Retourner l'ID au client
+  const factureId = uuidv4();
+  res.send({ factureId: factureId });
 });
 
-// Fonction d'envoi d'email et de création de facture
+const convertPdfToPng = (pdfPath) => {
+  return new Promise((resolve, reject) => {
+    const outputBase = path.basename(pdfPath, path.extname(pdfPath));
+    const outputPath = path.join(imagesDir, outputBase + ".png");
+
+
+    console.log("Chemin du PDF source:", pdfPath);
+    console.log("Chemin de destination prévu pour le PNG:", outputPath);
+
+
+    // Notez qu'aucun échappement supplémentaire pour les espaces n'est fait ici
+    const command = `pdftoppm -png -f 1 -singlefile "${pdfPath}" "${outputPath.replace('.png', '')}"`;
+
+    console.log("Commande exécutée:", command);
+
+    exec(command, (err) => {
+      if (err) {
+        console.log("Erreur lors de l'exécution de la commande:", err);
+        reject(err);
+      } else {
+        console.log("Conversion réussie, fichier PNG:", outputPath);
+        resolve(outputPath);
+      }
+    });
+  });
+};
+
+
 const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
-  const { email, subject, message, montant, factureId } = req.body; // factureId doit être fourni par le client
+  const { email, subject, message, montant, factureId } = req.body;
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
-  const file = req.file;
-  
 
   try {
-    // Créer et sauvegarder une nouvelle facture dans la base de données
+    if (!req.file) {
+      return res.status(400).send("Aucun fichier fourni.");
+    }
+
+    const filePath = await saveBufferToFile(req.file.buffer, req.file.originalname);
+    const imagePath = await convertPdfToPng(filePath);
+    const imageName = path.relative(imagesDir, imagePath);
+    const urlImage = `http://localhost:8000/images/${imageName}`;
+
     const nouvelleFacture = new Facture({
       factureId,
-      urlImage: 'URL_de_votre_miniature',
+      urlImage,
       montant,
       status: 'en attente',
       emetteur,
@@ -48,14 +94,7 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
     });
 
     await nouvelleFacture.save();
-    console.log("Facture créée avec succès:", nouvelleFacture);
-    
 
-    if (!file) {
-      return res.status(400).send("Aucun fichier fourni.");
-    }
-
-    // Configurer les options d'e-mail
     const mailOptions = {
       from: process.env.SMTP_MAIL,
       to: email,
@@ -63,17 +102,19 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
       text: message,
       attachments: [
         {
-          filename: file.originalname,
-          content: file.buffer,
+          filename: req.file.originalname,
+          path: filePath,
         },
       ],
     };
 
-    // Envoyer l'email
     await transporter.sendMail(mailOptions);
+   
+
     res.send({
       message: "Email envoyé avec succès à " + email,
       factureId: factureId,
+      urlImage: urlImage,
     });
   } catch (error) {
     console.error("Erreur lors de la création de la facture ou de l'envoi de l'email:", error);
@@ -81,13 +122,11 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
   }
 });
 
-
 const getFactureDetails = expressAsyncHandler(async (req, res) => {
-  const { factureId } = req.params; // Récupérer l'ID de la facture depuis les paramètres d'URL
+  const { factureId } = req.params;
   const facture = await Facture.findOne({ factureId: factureId });
-  
+
   if (facture) {
-    // Envoyer les détails de la facture au client
     res.json({
       factureId: facture.factureId,
       urlImage: facture.urlImage,
@@ -96,14 +135,9 @@ const getFactureDetails = expressAsyncHandler(async (req, res) => {
       destinataire: facture.destinataire,
       status: facture.status,
     });
-
   } else {
     res.status(404).send("Facture non trouvée");
   }
 });
-
-
-
-
 
 module.exports = { generateFactureId, createFactureAndSendEmail, getFactureDetails };
