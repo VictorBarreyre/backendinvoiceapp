@@ -6,9 +6,8 @@ const createPaymentIntent = async (req, res) => {
   try {
     const { amount, currency, emetteur, destinataire } = req.body;
     console.log("Reçu pour le paiement :", amount, currency, emetteur, destinataire);
-    
 
-
+  
     // Créez un PaymentIntent avec Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
