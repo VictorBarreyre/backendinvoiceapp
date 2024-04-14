@@ -6,7 +6,7 @@ const createPaymentIntent = async (req, res) => {
     const { amount, currency, emetteur, destinataire } = req.body;
     console.log("Reçu pour le paiement :", amount, currency, emetteur, destinataire);
 
-    // Parse JSON objects from strings
+    // Parse JSON objects from strings if necessary
     const parsedEmetteur = JSON.parse(emetteur);
     const parsedDestinataire = JSON.parse(destinataire);
 
@@ -32,7 +32,7 @@ const createPaymentIntent = async (req, res) => {
       customer: customer.id,
     });
 
-    // Créer un PaymentIntent avec le PaymentMethod
+    // Créer un PaymentIntent avec le PaymentMethod et spécifier 'sepa_debit' comme type autorisé
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: currency || "eur",
@@ -40,6 +40,7 @@ const createPaymentIntent = async (req, res) => {
       payment_method: paymentMethod.id,
       off_session: true,
       confirm: true,
+      payment_method_types: ['sepa_debit'], // Spécifier ici que sepa_debit est autorisé
       metadata: {
         emetteur: JSON.stringify(parsedEmetteur),
         destinataire: JSON.stringify(parsedDestinataire),
@@ -57,13 +58,5 @@ const createPaymentIntent = async (req, res) => {
     res.status(500).send({ success: false, message: error.message });
   }
 };
-
-if (stripe) {
-  console.log("Accès à la clé secrète Stripe réussi !");
-} else {
-  console.log("Échec de l'accès à la clé secrète Stripe. Veuillez vérifier votre configuration.");
-}
-
-console.log("PORT:", process.env.PORT);
 
 module.exports = { createPaymentIntent };
