@@ -1,62 +1,82 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const Facture = require('../models/Facture'); // Assurez-vous que le chemin vers votre modèle est correct
+const Facture = require('../models/Facture'); // Ensure the path to your model is correct
 
 const createPaymentIntent = async (req, res) => {
   try {
     const { amount, currency, emetteur, destinataire } = req.body;
     console.log("Reçu pour le paiement :", amount, currency, emetteur, destinataire);
+    // Validate and parse client and issuer data safely
+    let parsedClient, parsedIssuer;
+    try {
+      if (!emetteur || !destinataire) {
+        throw new Error('Client or issuer data is missing');
+      }
+      parsedClient = JSON.parse(emetteur);
+      parsedIssuer = JSON.parse(destinataire);
+    } catch (parseError) {
+      console.error("Error parsing client or issuer data:", parseError);
+      return res.status(400).send({ success: false, message: "Invalid client or issuer data" });
+    }
 
-    // Parse JSON objects from strings if necessary
-    const parsedEmetteur = JSON.parse(emetteur);
-    const parsedDestinataire = JSON.parse(destinataire);
+    console.log(parsedClient,parsedIssuer)
 
-    // Créer un Customer sur Stripe
+    // Creating the Customer and PaymentMethod with the client's IBAN
     const customer = await stripe.customers.create({
-      email: parsedEmetteur.email,
-      name: parsedEmetteur.name,
-      description: `Customer for ${parsedEmetteur.name}`,
+      email: parsedClient.email,
+      name: parsedClient.name,
     });
 
-    // Créer un PaymentMethod de type SEPA Debit
+    const iban = parsedClient.iban
+
     const paymentMethod = await stripe.paymentMethods.create({
       type: 'sepa_debit',
-      sepa_debit: { iban: parsedEmetteur.iban },
+      sepa_debit: { iban }, // Use the IBAN provided by the client
       billing_details: {
-        name: parsedEmetteur.name,
-        email: parsedEmetteur.email,
+        name: parsedClient.name,
+        email: parsedClient.email,
       },
     });
 
-    // Attacher le PaymentMethod au Customer
-    await stripe.paymentMethods.attach(paymentMethod.id, {
-      customer: customer.id,
-    });
+    // Attaching the PaymentMethod to the Customer
+    await stripe.paymentMethods.attach(paymentMethod.id, { customer: customer.id });
 
-    // Créer un PaymentIntent avec le PaymentMethod et spécifier 'sepa_debit' comme type autorisé
+    const ip_address = req.ip || req.headers['x-forwarded-for'] || 'IP_ADDRESS_FALLBACK';
+
+    // Creating the PaymentIntent with the mandate data
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount,
+      amount,
       currency: currency || "eur",
       customer: customer.id,
       payment_method: paymentMethod.id,
       off_session: true,
       confirm: true,
-      payment_method_types: ['sepa_debit'], // Spécifier ici que sepa_debit est autorisé
+      payment_method_types: ['sepa_debit'],
+      mandate_data: {
+        customer_acceptance: {
+          type: 'online',
+          online: {
+            ip_address: ip_address,
+            user_agent: req.headers['user-agent']
+          }
+        }
+      },
       metadata: {
-        emetteur: JSON.stringify(parsedEmetteur),
-        destinataire: JSON.stringify(parsedDestinataire),
+        client: JSON.stringify(parsedClient),
+        issuer: JSON.stringify(parsedIssuer),
       },
     });
 
-    // Renvoyer le clientSecret et l'ID de la facture au client pour permettre le paiement
+  
     res.send({
       success: true,
-      message: 'PaymentIntent créé et facture sauvegardée avec succès.',
-      clientSecret: paymentIntent.client_secret,
+      message: 'PaymentIntent created and invoice saved successfully.',
+      clientSecret: paymentIntent.client_secret
     });
   } catch (error) {
-    console.error("Erreur lors de la création du PaymentIntent et de la facture:", error);
-    res.status(500).send({ success: false, message: error.message });
+    console.error("Error during the creation of the PaymentIntent and invoice:", error);
+    res.status(500).send({ success: false, message: error.message || "Internal server error" });
   }
 };
 
 module.exports = { createPaymentIntent };
+

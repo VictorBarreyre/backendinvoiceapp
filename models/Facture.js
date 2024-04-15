@@ -35,6 +35,7 @@ const factureSchema = new mongoose.Schema({
     adresse: String,
     siret: String,
     email: String,
+    iban: String,
   },
   // Vous pouvez ajouter d'autres champs selon vos besoins
 });
