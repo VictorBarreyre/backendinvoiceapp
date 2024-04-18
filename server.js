@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const emailRoutes = require("./routes/emailRoutes");
 const paiementRoutes = require('./routes/paiementRoutes');
+const userRoutes = require('./routes/userRoutes');
 const mongoose = require('mongoose'); // Importez mongoose
 const cors = require('cors')
 
@@ -17,6 +18,7 @@ app.use(express.static('public'));
 // Routes
 app.use("/email", emailRoutes);
 app.use("/paiement", paiementRoutes);
+app.use('/api/users', userRoutes);
 
 
 app.get("/", (req, res) => {
