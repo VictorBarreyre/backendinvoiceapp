@@ -85,3 +85,22 @@ exports.getUser = expressAsyncHandler(async (req, res) => {
     name: user.name
   });
 });
+
+// Fonction pour supprimer un utilisateur
+exports.deleteUser = expressAsyncHandler(async (req, res) => {
+  const { id } = req.params; // ID de l'utilisateur à supprimer
+
+  try {
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    // Supprimer l'utilisateur
+    await user.remove();
+    res.status(200).json({ message: 'Utilisateur supprimé avec succès' });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la suppression de l'utilisateur", error: error.message });
+  }
+});
