@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const bcrypt = require('bcryptjs');
+const argon2 = require('argon2');
 const jwt = require('jsonwebtoken');
 const expressAsyncHandler = require('express-async-handler');
 const nodemailer = require('nodemailer');
@@ -15,10 +15,11 @@ let transporter = nodemailer.createTransport({
   },
 });
 
-
 // Fonction pour inscrire un nouvel utilisateur
 exports.signupUser = expressAsyncHandler(async (req, res) => {
   const { email, password, name } = req.body;
+
+  console.log("Password before hashing:", password);
 
   // Vérifier si l'utilisateur existe déjà
   const userExists = await User.findOne({ email });
@@ -28,7 +29,8 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
   }
 
   // Hasher le mot de passe avant de sauvegarder l'utilisateur
-  const hashedPassword = await bcrypt.hash(password, 12);
+  const hashedPassword = await argon2.hash(password);
+  console.log("Hashed password with Argon2:", hashedPassword);
 
   // Créer un nouvel utilisateur
   const user = await User.create({
@@ -38,9 +40,8 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
   });
 
   if (user) {
-
-     // Envoyer un e-mail de confirmation
-     const mailOptions = {
+    // Envoyer un e-mail de confirmation
+    const mailOptions = {
       from: process.env.SMTP_MAIL,
       to: email,
       subject: 'Confirmation d\'inscription',
@@ -50,7 +51,7 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
     await transporter.sendMail(mailOptions);
 
     const token = jwt.sign(
-      {_id: user._id, email: user.email },
+      { id: user._id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -60,6 +61,7 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
       name: user.name,
       token
     });
+
   } else {
     res.status(400).send('Données utilisateur invalides');
   }
@@ -67,22 +69,25 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
 
 // Fonction pour connecter un utilisateur existant
 exports.signinUser = expressAsyncHandler(async (req, res) => {
-  const { email, name, password } = req.body;
-  console.log('Attempting to find user:', email);  // Log pour le débogage
+  const { email, password } = req.body;
+  
+  console.log('Attempting to find user:', email); // Log l'email pour confirmer la tentative de recherche
   const user = await User.findOne({ email });
   if (!user) {
-    console.log('No user found with that email');  // Log pour le débogage
+    console.log('No user found with that email'); // Si aucun utilisateur n'est trouvé
     return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
   }
 
-  console.log('User found, comparing password...');  // Log pour le débogage
-  const isMatch = await bcrypt.compare(password, user.password);
+  console.log("Submitted password for verification:", password);  // Affiche le mot de passe soumis pour vérification
+  console.log("Stored hashed password for verification:", user.password); // Affiche le mot de passe haché enregistré pour la vérification
+
+  const isMatch = await argon2.verify(user.password, password);
   if (!isMatch) {
-    console.log('Password does not match');  // Log pour le débogage
+    console.log('Password does not match'); // Confirmation que les mots de passe ne correspondent pas
     return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
   }
 
-  console.log('Password matches, signing token...');  // Log pour le débogage
+  console.log('Password matches, signing token...'); // Confirmation de la correspondance des mots de passe
   const token = jwt.sign(
     { id: user._id, email: user.email },
     process.env.JWT_SECRET,
@@ -98,6 +103,10 @@ exports.signinUser = expressAsyncHandler(async (req, res) => {
 });
 
 
+// Les autres fonctions restent inchangées puisqu'elles ne manipulent pas les mots de passe directement.
+
+
+
 // Fonction pour obtenir les informations d'un utilisateur par son ID
 exports.getUser = expressAsyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
@@ -106,7 +115,7 @@ exports.getUser = expressAsyncHandler(async (req, res) => {
     return;
   }
   res.json({
-    id: user._id,
+    _id: user._id,
     email: user.email,
     name: user.name
   });
