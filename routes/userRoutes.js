@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/userController');
-const authenticate = require('../middleware/authentificate'); // Assurez-vous que le chemin est correct
+const userController = require('../controllers/userController'); // Importez le contrôleur utilisateur
+const authenticate = require('../middleware/authentificate'); 
 
 // Route pour l'inscription des utilisateurs
 router.post('/signup', userController.signupUser);
@@ -14,5 +14,12 @@ router.get('/:id', userController.getUser);
 
 // Route pour supprimer un utilisateur
 router.delete('/:id', authenticate, userController.deleteUser);
+
+// Route pour envoyer l'e-mail de réinitialisation de mot de passe
+router.post('/forgot-password', userController.sendResetEmail);
+
+// Route pour réinitialiser le mot de passe
+router.post('/reset-password', userController.resetPassword);
+
 
 module.exports = router;
