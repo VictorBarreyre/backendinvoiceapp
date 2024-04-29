@@ -16,10 +16,9 @@ let transporter = nodemailer.createTransport({
 });
 
 // Fonction pour inscrire un nouvel utilisateur
+// Fonction pour inscrire un nouvel utilisateur
 exports.signupUser = expressAsyncHandler(async (req, res) => {
   const { email, password, name } = req.body;
-
-  console.log("Password before hashing:", password);
 
   // Vérifier si l'utilisateur existe déjà
   const userExists = await User.findOne({ email });
@@ -28,14 +27,10 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
     return;
   }
 
-  // Hasher le mot de passe avant de sauvegarder l'utilisateur
-  const hashedPassword = await argon2.hash(password);
-  console.log("Hashed password with Argon2:", hashedPassword);
-
-  // Créer un nouvel utilisateur
+  // Créer un nouvel utilisateur directement sans hacher le mot de passe ici
   const user = await User.create({
     email,
-    password: hashedPassword,
+    password,  // Le mot de passe sera haché par le middleware 'pre save'
     name
   });
 
@@ -61,33 +56,32 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
       name: user.name,
       token
     });
-
   } else {
     res.status(400).send('Données utilisateur invalides');
   }
 });
 
-// Fonction pour connecter un utilisateur existant
+
+
 exports.signinUser = expressAsyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  
-  console.log('Attempting to find user:', email); // Log l'email pour confirmer la tentative de recherche
+
+  // Recherche de l'utilisateur par email
   const user = await User.findOne({ email });
   if (!user) {
-    console.log('No user found with that email'); // Si aucun utilisateur n'est trouvé
+    console.log('No user found with that email');
     return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
   }
 
-  console.log("Submitted password for verification:", password);  // Affiche le mot de passe soumis pour vérification
-  console.log("Stored hashed password for verification:", user.password); // Affiche le mot de passe haché enregistré pour la vérification
-
-  const isMatch = await argon2.verify(user.password, password);
+  // Utilisation de la méthode comparePassword pour vérifier le mot de passe
+  const isMatch = await user.comparePassword(password);
   if (!isMatch) {
     console.log('Password does not match'); // Confirmation que les mots de passe ne correspondent pas
     return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
   }
 
-  console.log('Password matches, signing token...'); // Confirmation de la correspondance des mots de passe
+  // Si le mot de passe est correct, générez un token, etc.
+  console.log('Password matches, signing token...');
   const token = jwt.sign(
     { id: user._id, email: user.email },
     process.env.JWT_SECRET,
@@ -101,6 +95,8 @@ exports.signinUser = expressAsyncHandler(async (req, res) => {
     token
   });
 });
+
+
 
 
 // Les autres fonctions restent inchangées puisqu'elles ne manipulent pas les mots de passe directement.
