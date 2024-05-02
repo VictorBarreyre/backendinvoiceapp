@@ -16,7 +16,6 @@ let transporter = nodemailer.createTransport({
 });
 
 // Fonction pour inscrire un nouvel utilisateur
-// Fonction pour inscrire un nouvel utilisateur
 exports.signupUser = expressAsyncHandler(async (req, res) => {
   const { email, password, name } = req.body;
 
@@ -64,7 +63,7 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
 
 
 exports.signinUser = expressAsyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, name } = req.body;
 
   // Recherche de l'utilisateur par email
   const user = await User.findOne({ email });
@@ -159,6 +158,30 @@ exports.resetPassword = expressAsyncHandler(async (req, res) => {
   res.json({ message: 'Mot de passe réinitialisé avec succès.' });
 });
 
+
+exports.updateUser = expressAsyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  try {
+    const user = await User.findById(id);
+
+    if (!user) {
+      res.status(404).json({ message: 'Utilisateur non trouvé' });
+      return;
+    }
+
+    // Mise à jour des champs de l'utilisateur
+    Object.keys(updates).forEach(key => {
+      user[key] = updates[key];
+    });
+
+    await user.save();
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur', error: error.message" });
+  }
+});
 
 
 
