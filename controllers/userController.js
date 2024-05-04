@@ -175,9 +175,6 @@ exports.updateUser = expressAsyncHandler(async (req, res) => {
 
 
 
-
-
-
 // Fonction pour supprimer un utilisateur
 exports.deleteUser = expressAsyncHandler(async (req, res) => {
   const { id } = req.params; // ID de l'utilisateur à supprimer
