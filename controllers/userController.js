@@ -61,44 +61,36 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
 });
 
 
-
 exports.signinUser = expressAsyncHandler(async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: 'Email does not exist' });
+    }
 
-  // Recherche de l'utilisateur par email
-  const user = await User.findOne({ email });
-  if (!user) {
-    console.log('No user found with that email');
-    return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Password is incorrect' });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    res.json({
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      adresse: user.adresse,
+      siret: user.siret,
+      iban: user.iban,
+      token
+    });
+  } catch (error) {
+    console.error('Error in signinUser:', error);
+    res.status(500).json({ message: 'Internal server error' });
+    console.log("Attempting to find user with email:", email);
+    console.log("Received login request with body:", req.body);
   }
-
-  // Utilisation de la méthode comparePassword pour vérifier le mot de passe
-  const isMatch = await user.comparePassword(password);
-  if (!isMatch) {
-    console.log('Password does not match'); // Confirmation que les mots de passe ne correspondent pas
-    return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
-  }
-
-  // Si le mot de passe est correct, générez un token, etc.
-  console.log('Password matches, signing token...');
-  const token = jwt.sign(
-    { id: user._id, email: user.email },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-
-  res.json({
-    _id: user._id,
-    email: user.email,
-    name: user.name,
-    token
-  });
 });
-
-
-
-
-// Les autres fonctions restent inchangées puisqu'elles ne manipulent pas les mots de passe directement.
 
 
 
@@ -112,7 +104,10 @@ exports.getUser = expressAsyncHandler(async (req, res) => {
   res.json({
     _id: user._id,
     email: user.email,
-    name: user.name
+    name: user.name,
+    adresse: user.adresse,
+    siret:user.siret,
+    iban: user.iban,
   });
 });
 
@@ -140,48 +135,45 @@ exports.sendResetEmail = expressAsyncHandler(async (req, res) => {
 });
 
 
-exports.resetPassword = expressAsyncHandler(async (req, res) => {
-  const { token, newPassword } = req.body;
-  const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
-  
-  const user = await User.findOne({ _id: decoded._id, resetPasswordToken: token, resetPasswordExpire: { $gt: Date.now() } });
-  if (!user) {
-    return res.status(400).json({ message: 'Token invalide ou expiré' });
-  }
-
-  // Hasher le nouveau mot de passe avant de le sauvegarder
-  user.password = await bcrypt.hash(newPassword, 12);
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-  await user.save();
-
-  res.json({ message: 'Mot de passe réinitialisé avec succès.' });
-});
-
 
 exports.updateUser = expressAsyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
 
+  // Exclure explicitement certains champs qui ne devraient pas être mis à jour directement
+  const protectedFields = ['password', 'token'];
+  Object.keys(updates).forEach(key => {
+    if (protectedFields.includes(key)) {
+      delete updates[key];
+    }
+  });
+
   try {
     const user = await User.findById(id);
-
     if (!user) {
-      res.status(404).json({ message: 'Utilisateur non trouvé' });
-      return;
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
-
+    
     // Mise à jour des champs de l'utilisateur
     Object.keys(updates).forEach(key => {
       user[key] = updates[key];
     });
 
     await user.save();
-    res.json(user);
+    res.json({
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      adresse: user.adresse,
+      siret: user.siret,
+      iban: user.iban
+    });
   } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur', error: error.message" });
+    res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur", error: error.message });
   }
 });
+
+
 
 
 
@@ -191,7 +183,7 @@ exports.deleteUser = expressAsyncHandler(async (req, res) => {
   const { id } = req.params; // ID de l'utilisateur à supprimer
 
   try {
-    const user = await User.findById(id);
+    const user = await User.findById(_id);
 
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });

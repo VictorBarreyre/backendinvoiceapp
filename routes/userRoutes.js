@@ -12,14 +12,12 @@ router.post('/signin', userController.signinUser);
 // Route pour obtenir les informations d'un utilisateur spécifique par son ID
 router.get('/:id', userController.getUser);
 
+// Route pour mettre à jour un utilisateur
+router.put('/update/:id', authenticate, userController.updateUser);
+
 // Route pour supprimer un utilisateur
 router.delete('/:id', authenticate, userController.deleteUser);
 
-// Route pour envoyer l'e-mail de réinitialisation de mot de passe
-router.post('/forgot-password', userController.sendResetEmail);
-
-// Route pour réinitialiser le mot de passe
-router.post('/reset-password', userController.resetPassword);
 
 
 module.exports = router;
