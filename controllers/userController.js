@@ -135,41 +135,37 @@ exports.sendResetEmail = expressAsyncHandler(async (req, res) => {
 });
 
 
-
 exports.updateUser = expressAsyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
 
-  // Exclure explicitement certains champs qui ne devraient pas être mis à jour directement
-  const protectedFields = ['password', 'token'];
-  Object.keys(updates).forEach(key => {
-    if (protectedFields.includes(key)) {
-      delete updates[key];
-    }
-  });
-
   try {
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé' });
-    }
-    
-    // Mise à jour des champs de l'utilisateur
-    Object.keys(updates).forEach(key => {
-      user[key] = updates[key];
-    });
+      const user = await User.findById(id);
+      if (!user) {
+          return res.status(404).json({ message: 'Utilisateur non trouvé' });
+      }
 
-    await user.save();
-    res.json({
-      _id: user._id,
-      email: user.email,
-      name: user.name,
-      adresse: user.adresse,
-      siret: user.siret,
-      iban: user.iban
-    });
+      Object.keys(updates).forEach(key => {
+          if (!['password', 'token', '__v'].includes(key)) {
+              user[key] = updates[key];
+          }
+      });
+
+      console.log("Updating user with ID:", id);
+      console.log("Updates to apply:", updates);
+
+
+      await user.save();
+      res.json({
+          _id: user._id,
+          email: user.email,
+          name: user.name,
+          adresse: user.adresse,
+          siret: user.siret,
+          iban: user.iban,
+      });
   } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur", error: error.message });
+      res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur", error: error.message });
   }
 });
 
