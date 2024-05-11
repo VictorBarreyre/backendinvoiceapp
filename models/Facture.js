@@ -6,6 +6,11 @@ const factureSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  userId: { // Champ pour relier la facture à l'utilisateur
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   urlImage: {
     type: String,
     required: false, 

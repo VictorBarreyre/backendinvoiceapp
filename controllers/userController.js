@@ -3,6 +3,8 @@ const argon2 = require('argon2');
 const jwt = require('jsonwebtoken');
 const expressAsyncHandler = require('express-async-handler');
 const nodemailer = require('nodemailer');
+const Invoice = require('../models/Facture')
+
 
 // Créez un transporteur nodemailer
 let transporter = nodemailer.createTransport({
