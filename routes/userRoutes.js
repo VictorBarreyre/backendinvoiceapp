@@ -15,9 +15,11 @@ router.get('/:id', userController.getUser);
 // Route pour mettre à jour un utilisateur
 router.put('/:id', authenticate, userController.updateUser);
 
+// Exemple d'ajout de middleware d'authentification
+router.get('/:id/invoices', authenticate, userController.getUserInvoices);
+
 // Route pour supprimer un utilisateur
 router.delete('/:id', authenticate, userController.deleteUser);
-
 
 
 module.exports = router;

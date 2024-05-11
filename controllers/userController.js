@@ -93,7 +93,6 @@ exports.signinUser = expressAsyncHandler(async (req, res) => {
 });
 
 
-
 // Fonction pour obtenir les informations d'un utilisateur par son ID
 exports.getUser = expressAsyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
@@ -134,6 +133,23 @@ exports.sendResetEmail = expressAsyncHandler(async (req, res) => {
   res.json({ message: 'Un e-mail de réinitialisation a été envoyé.' });
 });
 
+exports.getUserInvoices = expressAsyncHandler(async (req, res) => {
+  const userId = req.params.id;
+
+  // Vérifiez si l'utilisateur existe
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({ message: 'Utilisateur non trouvé' });
+  }
+
+  // Trouver toutes les factures associées à cet utilisateur
+  const invoices = await Invoice.find({ userId: userId });
+  if (!invoices) {
+    return res.status(404).json({ message: 'Pas de factures trouvées pour cet utilisateur' });
+  }
+
+  res.json(invoices);
+});
 
 exports.updateUser = expressAsyncHandler(async (req, res) => {
   const { id } = req.params;
