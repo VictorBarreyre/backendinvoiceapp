@@ -1,82 +1,59 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const Facture = require('../models/Facture'); // Ensure the path to your model is correct
+const Facture = require('../models/Facture');
 
-const createPaymentIntent = async (req, res) => {
+// Assurez-vous que le chemin vers votre modèle Facture est correct
+// Ajoutez des fonctions pour créer des comptes Stripe Express et gérer les paiements
+
+exports.createStripeAccountAndInvoice = async (req, res) => {
   try {
-    const { amount, currency, emetteur, destinataire } = req.body;
-    console.log("Reçu pour le paiement :", amount, currency, emetteur, destinataire);
-    // Validate and parse client and issuer data safely
-    let parsedClient, parsedIssuer;
-    try {
-      if (!emetteur || !destinataire) {
-        throw new Error('Client or issuer data is missing');
-      }
-      parsedClient = JSON.parse(emetteur);
-      parsedIssuer = JSON.parse(destinataire);
-    } catch (parseError) {
-      console.error("Error parsing client or issuer data:", parseError);
-      return res.status(400).send({ success: false, message: "Invalid client or issuer data" });
+    // Vérifiez si l'utilisateur a déjà un compte Stripe
+    let accountId = req.user.stripeAccountId;
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'FR',
+        email: req.user.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+      });
+      accountId = account.id;
+      // Enregistrer le nouvel accountId dans votre base de données
     }
 
-    console.log(parsedClient,parsedIssuer)
-
-    // Creating the Customer and PaymentMethod with the client's IBAN
-    const customer = await stripe.customers.create({
-      email: parsedClient.email,
-      name: parsedClient.name,
+    // Créer une facture dans votre système et stocker le lien vers le compte Stripe
+    const newInvoice = new Facture({
+      userId: req.user._id,
+      amount: req.body.total,
+      stripeAccountId: accountId,
+      // autres détails de la facture
     });
+    await newInvoice.save();
 
-    const iban = parsedClient.iban
-
-    const paymentMethod = await stripe.paymentMethods.create({
-      type: 'sepa_debit',
-      sepa_debit: { iban }, // Use the IBAN provided by the client
-      billing_details: {
-        name: parsedClient.name,
-        email: parsedClient.email,
-      },
-    });
-
-    // Attaching the PaymentMethod to the Customer
-    await stripe.paymentMethods.attach(paymentMethod.id, { customer: customer.id });
-
-    const ip_address = req.ip || req.headers['x-forwarded-for'] || 'IP_ADDRESS_FALLBACK';
-
-    // Creating the PaymentIntent with the mandate data
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: currency || "eur",
-      customer: customer.id,
-      payment_method: paymentMethod.id,
-      off_session: true,
-      confirm: true,
-      payment_method_types: ['sepa_debit'],
-      mandate_data: {
-        customer_acceptance: {
-          type: 'online',
-          online: {
-            ip_address: ip_address,
-            user_agent: req.headers['user-agent']
-          }
-        }
-      },
-      metadata: {
-        client: JSON.stringify(parsedClient),
-        issuer: JSON.stringify(parsedIssuer),
-      },
-    });
-
-  
-    res.send({
-      success: true,
-      message: 'PaymentIntent created and invoice saved successfully.',
-      clientSecret: paymentIntent.client_secret
-    });
+    res.json({ success: true, message: "Compte et facture créés avec succès.", accountId });
   } catch (error) {
-    console.error("Error during the creation of the PaymentIntent and invoice:", error);
-    res.status(500).send({ success: false, message: error.message || "Internal server error" });
+    console.error("Erreur lors de la création du compte ou de la facture:", error);
+    res.status(500).send("Erreur interne du serveur.");
   }
 };
 
-module.exports = { createPaymentIntent };
+exports.createPaymentIntent = async (req, res) => {
+  const { amount, stripeAccountId } = req.body;
 
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount * 100, // montant en centimes
+      currency: 'eur',
+      payment_method_types: ['card'],
+      transfer_data: {
+        destination: stripeAccountId,
+      },
+    });
+
+    res.json({ success: true, clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    console.error("Erreur lors de la création du PaymentIntent:", error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+};

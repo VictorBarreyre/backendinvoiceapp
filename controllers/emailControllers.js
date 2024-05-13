@@ -10,6 +10,7 @@ const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
 
+
 dotenv.config();
 
 let transporter = nodemailer.createTransport({
@@ -70,7 +71,9 @@ const convertPdfToPng = (pdfPath) => {
 
 
 const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
-  const { email, subject, message, montant, factureId } = req.body;
+  const { email, subject, message, montant, factureId,userId } = req.body;
+  console.log(req.body);  // Log pour voir tous les champs disponibles
+  console.log(req.file);
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
 
@@ -83,6 +86,7 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
     const imagePath = await convertPdfToPng(filePath);
     const imageName = path.relative(imagesDir, imagePath);
     const urlImage = `http://localhost:8000/images/${imageName}`;
+  
 
     const nouvelleFacture = new Facture({
       factureId,
@@ -91,6 +95,7 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
       status: 'en attente',
       emetteur,
       destinataire,
+      userId
     });
 
     await nouvelleFacture.save();
@@ -109,7 +114,7 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
-   
+
 
     res.send({
       message: "Email envoyé avec succès à " + email,
