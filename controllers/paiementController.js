@@ -1,11 +1,8 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_TOKEN);
 
-console.log("Stripe Secret Token:", process.env.STRIPE_SECRET_TOKEN);
-
-
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const { amount, currency, emetteur } = req.body; // Vérifiez que ces valeurs sont bien passées dans le corps de la requête
+    const { amount, currency, emetteur } = req.body;
     console.log("Creating checkout session with amount:", amount, "currency:", currency, "issuer:", emetteur);
 
     const session = await stripe.checkout.sessions.create({
@@ -36,17 +33,17 @@ exports.createCheckoutSession = async (req, res) => {
   }
 };
 
-// Function to create a payment intent
 exports.createPaymentIntent = async (req, res) => {
   try {
-    const { amount } = req.body; // Assurez-vous que le montant est en centimes et correctement passé dans le corps de la requête
+    const { amount } = req.body;
     console.log("Creating payment intent with amount:", amount);
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: 'eur', // Devise
-      confirmation_method: 'automatic',
-      confirm: true,
+      automatic_payment_methods: {
+        enabled: true,
+      },
     });
 
     console.log("Payment Intent created successfully", paymentIntent.id);
