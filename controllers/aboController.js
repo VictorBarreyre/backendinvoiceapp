@@ -3,6 +3,27 @@ require('dotenv').config();
 
 const stripe = Stripe(process.env.STRIPE_SECRET_TOKEN);
 
+exports.getProductsAndPrices = async (req, res) => {
+    try {
+      // Récupérer les produits actifs
+      const products = await stripe.products.list({ active: true });
+  
+      // Récupérer les prix associés aux produits
+      const prices = await stripe.prices.list({ active: true });
+  
+      // Associer les prix aux produits
+      const productsWithPrices = products.data.map(product => {
+        const productPrices = prices.data.filter(price => price.product === product.id);
+        return { ...product, prices: productPrices };
+      });
+  
+      res.send(productsWithPrices);
+    } catch (error) {
+      res.status(400).send({ error: { message: error.message } });
+    }
+  };
+
+  
 exports.createSubscription = async (req, res) => {
   const { email, payment_method } = req.body;
 
