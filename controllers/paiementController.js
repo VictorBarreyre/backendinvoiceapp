@@ -55,3 +55,35 @@ exports.createPaymentIntent = async (req, res) => {
     res.status(500).send({ error: error.message });
   }
 };
+
+exports.createSubscription = async (req, res) => {
+  try {
+    const { email, payment_method, priceId } = req.body;
+    console.log("Creating subscription with email:", email, "priceId:", priceId);
+
+    // Créer un client Stripe
+    const customer = await stripe.customers.create({
+      email: email,
+      payment_method: payment_method,
+      invoice_settings: {
+        default_payment_method: payment_method,
+      },
+    });
+
+    // Créer un abonnement avec une période d'essai de 30 jours
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: priceId }],
+      trial_period_days: 30, // Période d'essai de 30 jours
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    res.send({
+      subscriptionId: subscription.id,
+      clientSecret: subscription.latest_invoice.payment_intent.client_secret,
+    });
+  } catch (error) {
+    console.error("Failed to create subscription:", error);
+    res.status(500).send({ error: error.message });
+  }
+};
