@@ -3,10 +3,7 @@ const router = express.Router();
 const { createSubscription, getProductsAndPrices, createCheckoutSession } = require('../controllers/aboController');
 
 router.post('/create-subscription', createSubscription);
-
 router.get('/products-and-prices', getProductsAndPrices);
-
-router.get('/create-checkout-session', createCheckoutSession);
-
+router.post('/create-checkout-session', createCheckoutSession);
 
 module.exports = router;
