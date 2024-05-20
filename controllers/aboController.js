@@ -56,15 +56,25 @@ exports.createCheckoutSession = async (req, res) => {
     }
 
     try {
+        const customer = await stripe.customers.create({ email: email, name: name });
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
-            line_items: [{ price: 'price_1PHtU500KPylCGutp2WuDoFY', quantity: 1 }], // Replace with actual price ID or dynamic logic
+            line_items: [{ price: 'price_1PHtU500KPylCGutp2WuDoFY', quantity: 1 }], // Remplacez par l'ID de prix réel
             mode: 'subscription',
+            customer: customer.id,
             success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${req.headers.origin}/cancel`,
         });
 
-        res.send({ clientSecret: session.client_secret });
+        const setupIntent = await stripe.setupIntents.create({
+            customer: customer.id,
+            payment_method_types: ['card'],
+        });
+
+        console.log('Checkout session created:', session);
+
+        res.send({ clientSecret: setupIntent.client_secret });
     } catch (error) {
         console.error('Error creating checkout session:', error.message);
         res.status(400).send({ error: { message: error.message } });
