@@ -48,6 +48,8 @@ exports.createSubscription = async (req, res) => {
           throw new Error('Failed to create payment intent');
       }
 
+      console.log('Client Secret:', paymentIntent.client_secret); // Ajout du console.log ici
+
       res.send({
           subscriptionId: subscription.id,
           clientSecret: paymentIntent.client_secret,
@@ -78,35 +80,24 @@ exports.createCheckoutSession = async (req, res) => {
       console.log('New customer created:', customer.id);
     }
 
-    // Check if a setup intent already exists for the customer
-    const existingSetupIntents = await stripe.setupIntents.list({
+    // Create a Setup Intent
+    const setupIntent = await stripe.setupIntents.create({
       customer: customer.id,
-      limit: 1,
+      payment_method_types: ['card'],
     });
-
-    let setupIntent;
-    if (existingSetupIntents.data.length > 0) {
-      setupIntent = existingSetupIntents.data[0];
-      console.log('Using existing setup intent:', setupIntent.id);
-    } else {
-      setupIntent = await stripe.setupIntents.create({
-        customer: customer.id,
-        payment_method_types: ['card'],
-      });
-      console.log('New setup intent created:', setupIntent.id);
-    }
+    console.log('Setup intent created:', setupIntent.id);
 
     // Create the Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [{ price: 'price_1PHtU500KPylCGutp2WuDoFY', quantity: 1 }], // Remplacez par l'ID de prix réel
+      line_items: [{ price: 'price_1PHtU500KPylCGutp2WuDoFY', quantity: 1 }], // Replace with your actual price ID
       mode: 'subscription',
       customer: customer.id,
       success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.origin}/cancel`,
     });
 
-    console.log('Checkout session created:', session);
+    console.log('Checkout session created:', session.id);
 
     res.send({ clientSecret: setupIntent.client_secret });
   } catch (error) {
