@@ -63,7 +63,10 @@ exports.createSubscription = async (req, res) => {
 exports.createCheckoutSession = async (req, res) => {
   const { email, name } = req.body;
 
+  console.log('Received request to create checkout session for email:', email, 'name:', name);
+
   if (!email || !name) {
+    console.log('Email or Name is missing in the request.');
     return res.status(400).send({ error: { message: 'Email and Name are required.' } });
   }
 
@@ -105,4 +108,5 @@ exports.createCheckoutSession = async (req, res) => {
     res.status(400).send({ error: { message: error.message } });
   }
 };
+
 
