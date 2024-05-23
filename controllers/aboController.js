@@ -99,7 +99,7 @@ exports.createCheckoutSession = async (req, res) => {
 
     console.log('Checkout session created:', session.id);
 
-    res.send({ clientSecret: setupIntent.client_secret });
+    res.send({ clientSecret: setupIntent.client_secret, sessionId: session.id });
   } catch (error) {
     console.error('Error creating checkout session:', error.message);
     res.status(400).send({ error: { message: error.message } });
