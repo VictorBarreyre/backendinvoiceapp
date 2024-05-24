@@ -16,7 +16,6 @@ exports.getProductsAndPrices = async (req, res) => {
         res.status(400).send({ error: { message: error.message } });
     }
 };
-
 exports.createSubscription = async (req, res) => {
   const { email, priceId } = req.body;
 
@@ -28,11 +27,32 @@ exports.createSubscription = async (req, res) => {
   }
 
   try {
-      // Create a new customer
-      const customer = await stripe.customers.create({ email: email });
-      console.log('Customer created:', customer.id);
+      // Vérifiez si le client existe déjà
+      const existingCustomers = await stripe.customers.list({ email });
+      let customer;
 
-      // Create the subscription
+      if (existingCustomers.data.length > 0) {
+          customer = existingCustomers.data[0];
+          console.log('Using existing customer:', customer.id);
+
+          // Vérifiez si le client a déjà un abonnement actif
+          const subscriptions = await stripe.subscriptions.list({
+              customer: customer.id,
+              status: 'active',
+              limit: 1
+          });
+
+          if (subscriptions.data.length > 0) {
+              console.log('Customer already has an active subscription:', subscriptions.data[0].id);
+              return res.status(400).send({ error: { message: 'Customer already has an active subscription.' } });
+          }
+      } else {
+          // Créez un nouveau client si aucun n'existe
+          customer = await stripe.customers.create({ email: email });
+          console.log('New customer created:', customer.id);
+      }
+
+      // Créez l'abonnement
       const subscription = await stripe.subscriptions.create({
           customer: customer.id,
           items: [{ price: priceId }],
@@ -42,13 +62,13 @@ exports.createSubscription = async (req, res) => {
 
       console.log('Subscription created:', subscription.id);
 
-      // Check if payment intent is available
+      // Vérifiez si le payment intent est disponible
       const paymentIntent = subscription.latest_invoice.payment_intent;
       if (!paymentIntent) {
           throw new Error('Failed to create payment intent');
       }
 
-      console.log('Client Secret:', paymentIntent.client_secret); // Ajout du console.log ici
+      console.log('Client Secret:', paymentIntent.client_secret);
 
       res.send({
           subscriptionId: subscription.id,
@@ -59,6 +79,7 @@ exports.createSubscription = async (req, res) => {
       res.status(400).send({ error: { message: error.message } });
   }
 };
+
 
 exports.createCheckoutSession = async (req, res) => {
   const { email, name } = req.body;
