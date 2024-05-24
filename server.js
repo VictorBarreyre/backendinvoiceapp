@@ -3,7 +3,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const emailRoutes = require('./routes/emailRoutes');
-const paiementRoutes = require('./routes/paiementRoutes');
+const userRoutes = require('./routes/userRoutes');
 const aboRoutes = require('./routes/aboRoutes'); // Importez le routeur des abonnements
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -21,7 +21,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Routes
 app.use('/email', emailRoutes);
-app.use('/paiement', paiementRoutes);
+app.use('/api/users', userRoutes);
 app.use('/abonnement', aboRoutes); // Utilisez les routes des abonnements
 
 app.get('/', (req, res) => {
@@ -35,6 +35,15 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.error('Failed to connect to MongoDB', err));
 
 mongoose.set('debug', true);
+
+async function fetchUsers() {
+  try {
+    const users = await User.find({});
+    console.log("All users:", users);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+  }
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
