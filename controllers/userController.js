@@ -20,48 +20,48 @@ let transporter = nodemailer.createTransport({
 
 exports.signupUser = expressAsyncHandler(async (req, res) => {
     const { email, password, name } = req.body;
-  
+
     // Vérifier si l'utilisateur existe déjà
     const userExists = await User.findOne({ email });
     if (userExists) {
-      res.status(400).json({ message: 'Un utilisateur existe déjà avec cet email' });
-      return;
+        res.status(400).json({ message: 'Un utilisateur existe déjà avec cet email' });
+        return;
     }
-  
+
     // Créer un nouvel utilisateur directement sans hacher le mot de passe ici
     const user = await User.create({
-      email,
-      password,  // Le mot de passe sera haché par le middleware 'pre save'
-      name
+        email,
+        password,  // Le mot de passe sera haché par le middleware 'pre save'
+        name
     });
-  
+
     if (user) {
-      // Envoyer un e-mail de confirmation
-      const mailOptions = {
-        from: process.env.SMTP_MAIL,
-        to: email,
-        subject: 'Confirmation d\'inscription',
-        text: `Bonjour ${name}, vous êtes maintenant inscrit sur notre plateforme. Votre mot de passe temporaire est : ${password}`,
-      };
-  
-      await transporter.sendMail(mailOptions);
-  
-      const token = jwt.sign(
-        { id: user._id, email: user.email },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      res.status(201).json({
-        _id: user._id,
-        email: user.email,
-        name: user.name,
-        token
-      });
+        // Envoyer un e-mail de confirmation
+        const mailOptions = {
+            from: process.env.SMTP_MAIL,
+            to: email,
+            subject: 'Confirmation d\'inscription',
+            text: `Bonjour ${name}, vous êtes maintenant inscrit sur notre plateforme. Votre mot de passe temporaire est : ${password}`,
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        const token = jwt.sign(
+            { id: user._id, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+        res.status(201).json({
+            _id: user._id,
+            email: user.email,
+            name: user.name,
+            token
+        });
     } else {
-      res.status(400).send('Données utilisateur invalides');
+        res.status(400).send('Données utilisateur invalides');
     }
-  });
-  
+});
+
 
 exports.signinUser = expressAsyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -187,6 +187,16 @@ exports.updateUser = expressAsyncHandler(async (req, res) => {
   }
 });
 
+// Fonction pour vérifier si un utilisateur existe
+exports.checkUserExists = expressAsyncHandler(async (req, res) => {
+    const { email } = req.body;
+    try {
+        const userExists = await User.findOne({ email });
+        res.status(200).json({ exists: !!userExists });
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
 
 // Fonction pour supprimer un utilisateur
