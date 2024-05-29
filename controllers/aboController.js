@@ -126,4 +126,39 @@ exports.createCheckoutSession = async (req, res) => {
   }
 };
 
+exports.checkActiveSubscription = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+      console.error('Email is required.');
+      return res.status(400).send({ error: { message: 'Email is required.' } });
+  }
+
+  try {
+      const existingCustomers = await stripe.customers.list({ email });
+      let customer;
+
+      if (existingCustomers.data.length > 0) {
+          customer = existingCustomers.data[0];
+          console.log('Using existing customer:', customer.id);
+
+          const subscriptions = await stripe.subscriptions.list({
+              customer: customer.id,
+              status: 'active',
+              limit: 1
+          });
+
+          if (subscriptions.data.length > 0) {
+              console.log('Customer already has an active subscription:', subscriptions.data[0].id);
+              return res.send({ hasActiveSubscription: true });
+          }
+      }
+
+      res.send({ hasActiveSubscription: false });
+  } catch (error) {
+      console.error('Error checking subscription:', error.message);
+      res.status(400).send({ error: { message: error.message } });
+  }
+};
+
 
