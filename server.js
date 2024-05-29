@@ -7,6 +7,7 @@ const userRoutes = require('./routes/userRoutes');
 const aboRoutes = require('./routes/aboRoutes'); // Importez le routeur des abonnements
 const mongoose = require('mongoose');
 const cors = require('cors');
+const User = require('./models/User'); // Importez le modèle User
 
 dotenv.config();
 
