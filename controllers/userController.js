@@ -17,51 +17,51 @@ let transporter = nodemailer.createTransport({
   },
 });
 
-// Fonction pour inscrire un nouvel utilisateur
+
 exports.signupUser = expressAsyncHandler(async (req, res) => {
-  const { email, password, name } = req.body;
-
-  // Vérifier si l'utilisateur existe déjà
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    res.status(400).json({ message: 'Un utilisateur existe déjà avec cet email' });
-    return;
-  }
-
-  // Créer un nouvel utilisateur directement sans hacher le mot de passe ici
-  const user = await User.create({
-    email,
-    password,  // Le mot de passe sera haché par le middleware 'pre save'
-    name
-  });
-
-  if (user) {
-    // Envoyer un e-mail de confirmation
-    const mailOptions = {
-      from: process.env.SMTP_MAIL,
-      to: email,
-      subject: 'Confirmation d\'inscription',
-      text: `Bonjour ${name}, vous êtes maintenant inscrit sur notre plateforme.`,
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-    res.status(201).json({
-      _id: user._id,
-      email: user.email,
-      name: user.name,
-      token
+    const { email, password, name } = req.body;
+  
+    // Vérifier si l'utilisateur existe déjà
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      res.status(400).json({ message: 'Un utilisateur existe déjà avec cet email' });
+      return;
+    }
+  
+    // Créer un nouvel utilisateur directement sans hacher le mot de passe ici
+    const user = await User.create({
+      email,
+      password,  // Le mot de passe sera haché par le middleware 'pre save'
+      name
     });
-  } else {
-    res.status(400).send('Données utilisateur invalides');
-  }
-});
-
+  
+    if (user) {
+      // Envoyer un e-mail de confirmation
+      const mailOptions = {
+        from: process.env.SMTP_MAIL,
+        to: email,
+        subject: 'Confirmation d\'inscription',
+        text: `Bonjour ${name}, vous êtes maintenant inscrit sur notre plateforme. Votre mot de passe temporaire est : ${password}`,
+      };
+  
+      await transporter.sendMail(mailOptions);
+  
+      const token = jwt.sign(
+        { id: user._id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      res.status(201).json({
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        token
+      });
+    } else {
+      res.status(400).send('Données utilisateur invalides');
+    }
+  });
+  
 
 exports.signinUser = expressAsyncHandler(async (req, res) => {
   const { email, password } = req.body;
