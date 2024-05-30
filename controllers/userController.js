@@ -68,12 +68,12 @@ exports.signinUser = expressAsyncHandler(async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: 'Email does not exist' });
+      return res.status(401).json({ message: 'Utilisateur ou mot de passe incorrect' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Password is incorrect' });
+      return res.status(401).json({ message: 'Utilisateur ou mot de passe incorrect' });
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
@@ -88,11 +88,12 @@ exports.signinUser = expressAsyncHandler(async (req, res) => {
     });
   } catch (error) {
     console.error('Error in signinUser:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Erreur interne du serveur' });
     console.log("Attempting to find user with email:", email);
     console.log("Received login request with body:", req.body);
   }
 });
+
 
 
 // Fonction pour obtenir les informations d'un utilisateur par son ID
