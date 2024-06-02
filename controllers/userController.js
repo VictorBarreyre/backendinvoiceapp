@@ -200,15 +200,20 @@ exports.checkUserExists = expressAsyncHandler(async (req, res) => {
 });
 
 
-// Fonction pour supprimer un utilisateur
 exports.deleteUser = expressAsyncHandler(async (req, res) => {
   const { id } = req.params; // ID de l'utilisateur à supprimer
+  const { password } = req.body; // Mot de passe fourni pour confirmation
 
   try {
-    const user = await User.findById(_id);
+    const user = await User.findById(id);
 
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Mot de passe incorrect' });
     }
 
     // Supprimer l'utilisateur
