@@ -208,18 +208,21 @@ exports.deleteUser = expressAsyncHandler(async (req, res) => {
     const user = await User.findById(id);
 
     if (!user) {
+      console.log(`User with ID ${id} not found`);
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log('Password does not match');
       return res.status(401).json({ message: 'Mot de passe incorrect' });
     }
 
     // Supprimer l'utilisateur
-    await user.remove();
+    await user.deleteOne();
     res.status(200).json({ message: 'Utilisateur supprimé avec succès' });
   } catch (error) {
+    console.error('Error deleting user:', error);
     res.status(500).json({ message: "Erreur lors de la suppression de l'utilisateur", error: error.message });
   }
 });
