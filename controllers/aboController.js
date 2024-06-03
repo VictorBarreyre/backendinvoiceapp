@@ -17,6 +17,56 @@ exports.getProductsAndPrices = async (req, res) => {
     }
 };
 
+
+
+exports.createCheckoutSession = async (req, res) => {
+  const { email, name, priceId } = req.body;
+  console.log('Received request to create checkout session for email:', email, 'name:', name, 'priceId:', priceId);
+
+  if (!email || !name || !priceId) {
+    console.log('Email, Name or Price ID is missing in the request.');
+    return res.status(400).send({ error: { message: 'Email, Name and Price ID are required.' } });
+  }
+
+  try {
+    const existingCustomers = await stripe.customers.list({ email });
+    let customer;
+
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0];
+      console.log('Using existing customer:', customer.id);
+    } else {
+      customer = await stripe.customers.create({ email, name });
+      console.log('New customer created:', customer.id);
+    }
+
+    // Creating subscription directly since session creation for card payment not utilized in response
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    const paymentIntent = subscription.latest_invoice.payment_intent;
+    if (paymentIntent) {
+      res.send({
+        sessionId: null,  // No session id used in this flow
+        clientSecret: paymentIntent.client_secret,
+      });
+    } else {
+      throw new Error('Failed to retrieve payment intent');
+    }
+  } catch (error) {
+    console.error('Error creating subscription:', error.message);
+    res.status(500).send({ error: { message: 'Failed to create payment session', details: error.message } });
+  }
+};
+
+
+
+
+
 exports.createSubscription = async (req, res) => {
   const { email, priceId } = req.body;
 
@@ -72,60 +122,6 @@ exports.createSubscription = async (req, res) => {
   }
 };
 
-exports.createCheckoutSession = async (req, res) => {
-  const { email, name, priceId } = req.body;
-
-  console.log('Received request to create checkout session for email:', email, 'name:', name, 'priceId:', priceId);
-
-  if (!email || !name || !priceId) {
-    console.log('Email, Name or Price ID is missing in the request.');
-    return res.status(400).send({ error: { message: 'Email, Name and Price ID are required.' } });
-  }
-
-  try {
-    // Check if the customer already exists
-    const existingCustomers = await stripe.customers.list({ email });
-    let customer;
-
-    if (existingCustomers.data.length > 0) {
-      customer = existingCustomers.data[0];
-      console.log('Using existing customer:', customer.id);
-    } else {
-      customer = await stripe.customers.create({ email: email, name: name });
-      console.log('New customer created:', customer.id);
-    }
-
-    // Create the Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      mode: 'subscription',
-      customer: customer.id,
-      success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/cancel`,
-    });
-
-    console.log('Checkout session created:', session.id);
-
-    // Create a PaymentIntent for the subscription
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      expand: ['latest_invoice.payment_intent'],
-    });
-
-    const paymentIntent = subscription.latest_invoice.payment_intent;
-
-    res.send({
-      sessionId: session.id,
-      clientSecret: paymentIntent.client_secret,
-    });
-  } catch (error) {
-    console.error('Error creating checkout session:', error.message);
-    res.status(400).send({ error: { message: error.message } });
-  }
-};
 
 exports.checkActiveSubscription = async (req, res) => {
   const { email } = req.body;
@@ -161,5 +157,4 @@ exports.checkActiveSubscription = async (req, res) => {
       res.status(400).send({ error: { message: error.message } });
   }
 };
-
 
