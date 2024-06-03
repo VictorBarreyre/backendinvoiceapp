@@ -23,68 +23,63 @@ exports.createSubscription = async (req, res) => {
   console.log('Received createSubscription request with:', req.body);
 
   if (!email || !priceId) {
-      console.error('Email and Price ID are required.');
-      return res.status(400).send({ error: { message: 'Email and Price ID are required.' } });
+    console.error('Email and Price ID are required.');
+    return res.status(400).send({ error: { message: 'Email and Price ID are required.' } });
   }
 
   try {
-      const existingCustomers = await stripe.customers.list({ email });
-      let customer;
+    const existingCustomers = await stripe.customers.list({ email });
+    let customer;
 
-      if (existingCustomers.data.length > 0) {
-          customer = existingCustomers.data[0];
-          console.log('Using existing customer:', customer.id);
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0];
+      console.log('Using existing customer:', customer.id);
 
-          const subscriptions = await stripe.subscriptions.list({
-              customer: customer.id,
-              status: 'active',
-              limit: 1
-          });
-
-          if (subscriptions.data.length > 0) {
-              console.log('Customer already has an active subscription:', subscriptions.data[0].id);
-              return res.status(400).send({ error: { message: 'Customer already has an active subscription.' } });
-          }
-      } else {
-          customer = await stripe.customers.create({ email: email });
-          console.log('New customer created:', customer.id);
-      }
-
-      const subscription = await stripe.subscriptions.create({
-          customer: customer.id,
-          items: [{ price: priceId }],
-          payment_behavior: 'default_incomplete',
-          expand: ['latest_invoice.payment_intent'],
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'active',
+        limit: 1
       });
 
-      console.log('Subscription created:', subscription.id);
-
-      const paymentIntent = subscription.latest_invoice.payment_intent;
-      if (!paymentIntent) {
-          throw new Error('Failed to create payment intent');
+      if (subscriptions.data.length > 0) {
+        console.log('Customer already has an active subscription:', subscriptions.data[0].id);
+        return res.status(400).send({ error: { message: 'Customer already has an active subscription.' } });
       }
+    } else {
+      customer = await stripe.customers.create({ email: email });
+      console.log('New customer created:', customer.id);
+    }
 
-      console.log('Client Secret:', paymentIntent.client_secret);
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      expand: ['latest_invoice.payment_intent'],
+    });
 
-      res.send({
-          subscriptionId: subscription.id,
-          clientSecret: paymentIntent.client_secret,
-      });
+    const paymentIntent = subscription.latest_invoice.payment_intent;
+
+    console.log('Subscription created:', subscription.id);
+    console.log('Payment Intent created:', paymentIntent.id);
+
+    res.send({
+      subscriptionId: subscription.id,
+      clientSecret: paymentIntent.client_secret,
+    });
   } catch (error) {
-      console.error('Error creating subscription:', error.message);
-      res.status(400).send({ error: { message: error.message } });
+    console.error('Error creating subscription:', error.message);
+    res.status(400).send({ error: { message: error.message } });
   }
 };
 
-
 exports.createCheckoutSession = async (req, res) => {
-  const { email, name } = req.body;
+  const { email, name, priceId } = req.body;
 
-  console.log('Received request to create checkout session for email:', email, 'name:', name);
+  console.log('Received request to create checkout session for email:', email, 'name:', name, 'priceId:', priceId);
 
-  if (!email || !name) {
-    console.log('Email or Name is missing in the request.');
-    return res.status(400).send({ error: { message: 'Email and Name are required.' } });
+  if (!email || !name || !priceId) {
+    console.log('Email, Name or Price ID is missing in the request.');
+    return res.status(400).send({ error: { message: 'Email, Name and Price ID are required.' } });
   }
 
   try {
@@ -100,17 +95,10 @@ exports.createCheckoutSession = async (req, res) => {
       console.log('New customer created:', customer.id);
     }
 
-    // Create a Setup Intent
-    const setupIntent = await stripe.setupIntents.create({
-      customer: customer.id,
-      payment_method_types: ['card'],
-    });
-    console.log('Setup intent created:', setupIntent.id);
-
     // Create the Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [{ price: 'price_1PHtU500KPylCGutp2WuDoFY', quantity: 1 }], // Replace with your actual price ID
+      line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
       customer: customer.id,
       success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -119,7 +107,20 @@ exports.createCheckoutSession = async (req, res) => {
 
     console.log('Checkout session created:', session.id);
 
-    res.send({ clientSecret: setupIntent.client_secret, sessionId: session.id });
+    // Create a PaymentIntent for the subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    const paymentIntent = subscription.latest_invoice.payment_intent;
+
+    res.send({
+      sessionId: session.id,
+      clientSecret: paymentIntent.client_secret,
+    });
   } catch (error) {
     console.error('Error creating checkout session:', error.message);
     res.status(400).send({ error: { message: error.message } });
