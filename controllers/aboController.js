@@ -29,6 +29,7 @@ exports.createCheckoutSession = async (req, res) => {
   }
 
   try {
+    // Check for existing customer
     const existingCustomers = await stripe.customers.list({ email });
     let customer;
 
@@ -40,7 +41,8 @@ exports.createCheckoutSession = async (req, res) => {
       console.log('New customer created:', customer.id);
     }
 
-    // Creating subscription directly since session creation for card payment not utilized in response
+    // Create subscription
+    console.log('Creating subscription with price ID:', priceId);
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
       items: [{ price: priceId }],
@@ -48,13 +50,19 @@ exports.createCheckoutSession = async (req, res) => {
       expand: ['latest_invoice.payment_intent'],
     });
 
+    console.log('Subscription created with ID:', subscription.id);
+    
     const paymentIntent = subscription.latest_invoice.payment_intent;
+    console.log('PaymentIntent retrieved with ID:', paymentIntent.id);
+
     if (paymentIntent) {
+      console.log('Sending clientSecret:', paymentIntent.client_secret);
       res.send({
-        sessionId: null,  // No session id used in this flow
+        sessionId: null,  // Not used in this flow
         clientSecret: paymentIntent.client_secret,
       });
     } else {
+      console.log('No PaymentIntent found');
       throw new Error('Failed to retrieve payment intent');
     }
   } catch (error) {
@@ -66,7 +74,7 @@ exports.createCheckoutSession = async (req, res) => {
 
 
 
-
+// à voir si on doit pas la virer car on l'utilise plus 
 exports.createSubscription = async (req, res) => {
   const { email, priceId } = req.body;
 
