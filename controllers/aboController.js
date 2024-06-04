@@ -73,64 +73,6 @@ exports.createCheckoutSession = async (req, res) => {
 
 
 
-
-// à voir si on doit pas la virer car on l'utilise plus 
-exports.createSubscription = async (req, res) => {
-  const { email, priceId } = req.body;
-
-  console.log('Received createSubscription request with:', req.body);
-
-  if (!email || !priceId) {
-    console.error('Email and Price ID are required.');
-    return res.status(400).send({ error: { message: 'Email and Price ID are required.' } });
-  }
-
-  try {
-    const existingCustomers = await stripe.customers.list({ email });
-    let customer;
-
-    if (existingCustomers.data.length > 0) {
-      customer = existingCustomers.data[0];
-      console.log('Using existing customer:', customer.id);
-
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customer.id,
-        status: 'active',
-        limit: 1
-      });
-
-      if (subscriptions.data.length > 0) {
-        console.log('Customer already has an active subscription:', subscriptions.data[0].id);
-        return res.status(400).send({ error: { message: 'Customer already has an active subscription.' } });
-      }
-    } else {
-      customer = await stripe.customers.create({ email: email });
-      console.log('New customer created:', customer.id);
-    }
-
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      expand: ['latest_invoice.payment_intent'],
-    });
-
-    const paymentIntent = subscription.latest_invoice.payment_intent;
-
-    console.log('Subscription created:', subscription.id);
-    console.log('Payment Intent created:', paymentIntent.id);
-
-    res.send({
-      subscriptionId: subscription.id,
-      clientSecret: paymentIntent.client_secret,
-    });
-  } catch (error) {
-    console.error('Error creating subscription:', error.message);
-    res.status(400).send({ error: { message: error.message } });
-  }
-};
-
-
 exports.checkActiveSubscription = async (req, res) => {
   const { email } = req.body;
 
