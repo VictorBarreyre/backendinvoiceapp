@@ -18,7 +18,6 @@ exports.getProductsAndPrices = async (req, res) => {
 };
 
 
-
 exports.createCheckoutSession = async (req, res) => {
   const { email, name, priceId } = req.body;
   console.log('Received request to create checkout session for email:', email, 'name:', name, 'priceId:', priceId);
@@ -70,6 +69,7 @@ exports.createCheckoutSession = async (req, res) => {
     res.status(500).send({ error: { message: 'Failed to create payment session', details: error.message } });
   }
 };
+
 
 
 
