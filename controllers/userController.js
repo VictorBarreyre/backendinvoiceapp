@@ -62,17 +62,19 @@ exports.signupUser = expressAsyncHandler(async (req, res) => {
     }
 });
 
-
 exports.signinUser = expressAsyncHandler(async (req, res) => {
   const { email, password } = req.body;
+  console.log("Attempting to find user with email:", email);
   try {
     const user = await User.findOne({ email });
     if (!user) {
+      console.log("User not found with email:", email);
       return res.status(401).json({ message: 'Utilisateur ou mot de passe incorrect' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log("Password does not match for user:", email);
       return res.status(401).json({ message: 'Utilisateur ou mot de passe incorrect' });
     }
 
@@ -89,10 +91,9 @@ exports.signinUser = expressAsyncHandler(async (req, res) => {
   } catch (error) {
     console.error('Error in signinUser:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
-    console.log("Attempting to find user with email:", email);
-    console.log("Received login request with body:", req.body);
   }
 });
+
 
 
 
