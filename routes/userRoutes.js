@@ -9,6 +9,12 @@ router.post('/signup', userController.signupUser);
 // Route pour la connexion des utilisateurs
 router.post('/signin', userController.signinUser);
 
+//Route pour l'envoie du lien'
+router.post('/send-reset-email',userController.sendResetEmail );
+
+//Route pour la réinitialisation du mot de passe
+router.post('/reset-password', userController.resetPassword);
+
 // Route pour obtenir les informations d'un utilisateur spécifique par son ID
 router.get('/:id', userController.getUser);
 

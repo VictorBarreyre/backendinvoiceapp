@@ -3,8 +3,7 @@ const argon2 = require('argon2');
 const jwt = require('jsonwebtoken');
 const expressAsyncHandler = require('express-async-handler');
 const nodemailer = require('nodemailer');
-const Invoice = require('../models/Facture')
-
+const Invoice = require('../models/Facture');
 
 // Créez un transporteur nodemailer
 let transporter = nodemailer.createTransport({
@@ -17,49 +16,48 @@ let transporter = nodemailer.createTransport({
   },
 });
 
-
 exports.signupUser = expressAsyncHandler(async (req, res) => {
-    const { email, password, name } = req.body;
+  const { email, password, name } = req.body;
 
-    // Vérifier si l'utilisateur existe déjà
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-        res.status(400).json({ message: 'Un utilisateur existe déjà avec cet email' });
-        return;
-    }
+  // Vérifier si l'utilisateur existe déjà
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    res.status(400).json({ message: 'Un utilisateur existe déjà avec cet email' });
+    return;
+  }
 
-    // Créer un nouvel utilisateur directement sans hacher le mot de passe ici
-    const user = await User.create({
-        email,
-        password,  // Le mot de passe sera haché par le middleware 'pre save'
-        name
+  // Créer un nouvel utilisateur directement sans hacher le mot de passe ici
+  const user = await User.create({
+    email,
+    password, // Le mot de passe sera haché par le middleware 'pre save'
+    name
+  });
+
+  if (user) {
+    // Envoyer un e-mail de confirmation
+    const mailOptions = {
+      from: process.env.SMTP_MAIL,
+      to: email,
+      subject: 'Confirmation d\'inscription',
+      text: `Bonjour ${name}, vous êtes maintenant inscrit sur notre plateforme. Votre mot de passe temporaire est : ${password}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    res.status(201).json({
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      token
     });
-
-    if (user) {
-        // Envoyer un e-mail de confirmation
-        const mailOptions = {
-            from: process.env.SMTP_MAIL,
-            to: email,
-            subject: 'Confirmation d\'inscription',
-            text: `Bonjour ${name}, vous êtes maintenant inscrit sur notre plateforme. Votre mot de passe temporaire est : ${password}`,
-        };
-
-        await transporter.sendMail(mailOptions);
-
-        const token = jwt.sign(
-            { id: user._id, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-        res.status(201).json({
-            _id: user._id,
-            email: user.email,
-            name: user.name,
-            token
-        });
-    } else {
-        res.status(400).send('Données utilisateur invalides');
-    }
+  } else {
+    res.status(400).send('Données utilisateur invalides');
+  }
 });
 
 exports.signinUser = expressAsyncHandler(async (req, res) => {
@@ -94,8 +92,28 @@ exports.signinUser = expressAsyncHandler(async (req, res) => {
   }
 });
 
+exports.sendResetEmail = expressAsyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).json({ message: 'Utilisateur non trouvé' });
+  }
+  const resetToken = jwt.sign({ _id: user._id }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
+  user.resetPasswordToken = resetToken;
+  user.resetPasswordExpire = Date.now() + 3 * 60 * 60 * 1000; // 3 hours
+  await user.save();
 
-
+  // Construisez un lien de réinitialisation qui pointe vers l'interface frontend
+  const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+  const mailOptions = {
+    from: process.env.SMTP_MAIL,
+    to: email,
+    subject: 'Réinitialisation de votre mot de passe',
+    text: `Bonjour, vous avez demandé la réinitialisation de votre mot de passe. Veuillez cliquer sur le lien suivant pour réinitialiser votre mot de passe: ${resetLink}`
+  };
+  await transporter.sendMail(mailOptions);
+  res.json({ message: 'Un e-mail de réinitialisation a été envoyé.' });
+});
 
 // Fonction pour obtenir les informations d'un utilisateur par son ID
 exports.getUser = expressAsyncHandler(async (req, res) => {
@@ -109,32 +127,9 @@ exports.getUser = expressAsyncHandler(async (req, res) => {
     email: user.email,
     name: user.name,
     adresse: user.adresse,
-    siret:user.siret,
+    siret: user.siret,
     iban: user.iban,
   });
-});
-
-exports.sendResetEmail = expressAsyncHandler(async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(404).json({ message: 'Utilisateur non trouvé' });
-  }
-  const resetToken = jwt.sign({ _id: user._id }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
-  user.resetPasswordToken = resetToken;
-  user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
-  await user.save();
-
-  // Construisez un lien de réinitialisation qui pointe vers l'interface frontend
-  const resetLink = `http://yourfrontenddomain.com/reset-password?token=${resetToken}`;
-  const mailOptions = {
-    from: process.env.SMTP_MAIL,
-    to: email,
-    subject: 'Réinitialisation de votre mot de passe',
-    text: `Bonjour, vous avez demandé la réinitialisation de votre mot de passe. Veuillez cliquer sur le lien suivant pour réinitialiser votre mot de passe: ${resetLink}`
-  };
-  await transporter.sendMail(mailOptions);
-  res.json({ message: 'Un e-mail de réinitialisation a été envoyé.' });
 });
 
 exports.getUserInvoices = expressAsyncHandler(async (req, res) => {
@@ -160,44 +155,67 @@ exports.updateUser = expressAsyncHandler(async (req, res) => {
   const updates = req.body;
 
   try {
-      const user = await User.findById(id);
-      if (!user) {
-          return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    Object.keys(updates).forEach(key => {
+      if (!['password', 'token', '__v'].includes(key)) {
+        user[key] = updates[key];
       }
+    });
 
-      Object.keys(updates).forEach(key => {
-          if (!['password', 'token', '__v'].includes(key)) {
-              user[key] = updates[key];
-          }
-      });
+    console.log("Updating user with ID:", id);
+    console.log("Updates to apply:", updates);
 
-      console.log("Updating user with ID:", id);
-      console.log("Updates to apply:", updates);
-
-
-      await user.save();
-      res.json({
-          _id: user._id,
-          email: user.email,
-          name: user.name,
-          adresse: user.adresse,
-          siret: user.siret,
-          iban: user.iban,
-      });
+    await user.save();
+    res.json({
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      adresse: user.adresse,
+      siret: user.siret,
+      iban: user.iban,
+    });
   } catch (error) {
-      res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur", error: error.message });
+    res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur", error: error.message });
   }
 });
 
 // Fonction pour vérifier si un utilisateur existe
 exports.checkUserExists = expressAsyncHandler(async (req, res) => {
-    const { email } = req.body;
-    try {
-        const userExists = await User.findOne({ email });
-        res.status(200).json({ exists: !!userExists });
-    } catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
+  const { email } = req.body;
+  try {
+    const userExists = await User.findOne({ email });
+    res.status(200).json({ exists: !!userExists });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+exports.resetPassword = expressAsyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
+    const user = await User.findById(decoded._id);
+
+    if (!user || user.resetPasswordToken !== token || user.resetPasswordExpire < Date.now()) {
+      return res.status(400).json({ message: 'Le lien de réinitialisation est invalide ou a expiré' });
     }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    res.json({ message: 'Mot de passe réinitialisé avec succès' });
+  } catch (error) {
+    console.error('Error in resetPassword:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
 });
 
 
