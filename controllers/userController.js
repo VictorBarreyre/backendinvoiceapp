@@ -99,6 +99,7 @@ exports.sendResetEmail = expressAsyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Utilisateur non trouvé' });
   }
   const resetToken = jwt.sign({ _id: user._id }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
+  console.log('Generated reset token:', resetToken);
   user.resetPasswordToken = resetToken;
   user.resetPasswordExpire = Date.now() + 3 * 60 * 60 * 1000; // 3 hours
   await user.save();
@@ -198,13 +199,38 @@ exports.resetPassword = expressAsyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
-    const user = await User.findById(decoded._id);
+    console.log('Received token:', token);
+    console.log('Received new password:', newPassword);
 
-    if (!user || user.resetPasswordToken !== token || user.resetPasswordExpire < Date.now()) {
-      return res.status(400).json({ message: 'Le lien de réinitialisation est invalide ou a expiré' });
+    // Décodage du token pour obtenir l'ID de l'utilisateur
+    const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
+    console.log('Decoded token:', decoded);
+
+    // Recherche de l'utilisateur par ID
+    const user = await User.findById(decoded._id);
+    console.log('Found user:', user);
+
+    if (!user) {
+      console.log('User not found');
+      return res.status(400).json({ message: 'Utilisateur non trouvé' });
     }
 
+    // Ajout des logs pour le token et la date d'expiration
+    console.log('User resetPasswordToken:', user.resetPasswordToken);
+    console.log('User resetPasswordExpire:', user.resetPasswordExpire);
+    console.log('Current time:', Date.now());
+
+    if (user.resetPasswordToken !== token) {
+      console.log('Tokens do not match');
+      return res.status(400).json({ message: 'Le lien de réinitialisation est invalide' });
+    }
+
+    if (user.resetPasswordExpire < Date.now()) {
+      console.log('Token has expired');
+      return res.status(400).json({ message: 'Le lien de réinitialisation a expiré' });
+    }
+
+    // Mise à jour du mot de passe
     user.password = newPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
