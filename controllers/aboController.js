@@ -85,33 +85,75 @@ exports.checkActiveSubscription = async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
-      console.error('Email is required.');
-      return res.status(400).send({ error: { message: 'Email is required.' } });
+    console.error('Email is required.');
+    return res.status(400).send({ error: { message: 'Email is required.' } });
   }
 
   try {
-      const existingCustomers = await stripe.customers.list({ email });
-      let customer;
+    const existingCustomers = await stripe.customers.list({ email });
+    let customer;
 
-      if (existingCustomers.data.length > 0) {
-          customer = existingCustomers.data[0];
-          console.log('Using existing customer:', customer.id);
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0];
+      console.log('Using existing customer:', customer.id);
 
-          const subscriptions = await stripe.subscriptions.list({
-              customer: customer.id,
-              status: 'active',
-              limit: 1
-          });
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'active',
+        limit: 1
+      });
 
-          if (subscriptions.data.length > 0) {
-              console.log('Customer already has an active subscription:', subscriptions.data[0].id);
-              return res.send({ hasActiveSubscription: true });
-          }
+      if (subscriptions.data.length > 0) {
+        const activeSubscription = subscriptions.data[0];
+        console.log('Customer already has an active subscription:', activeSubscription.id);
+        return res.send({ hasActiveSubscription: true, subscription: activeSubscription });
       }
+    }
 
-      res.send({ hasActiveSubscription: false });
+    res.send({ hasActiveSubscription: false });
   } catch (error) {
-      console.error('Error checking subscription:', error.message);
-      res.status(400).send({ error: { message: error.message } });
+    console.error('Error checking subscription:', error.message);
+    res.status(400).send({ error: { message: error.message } });
+  }
+};
+
+
+exports.cancelSubscription = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    console.error('Email is required.');
+    return res.status(400).send({ error: { message: 'Email is required.' } });
+  }
+
+  try {
+    const existingCustomers = await stripe.customers.list({ email });
+    let customer;
+
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0];
+      console.log('Using existing customer:', customer.id);
+
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'active',
+        limit: 1
+      });
+
+      if (subscriptions.data.length > 0) {
+        const activeSubscription = subscriptions.data[0];
+        console.log('Canceling subscription:', activeSubscription.id);
+
+        const canceledSubscription = await stripe.subscriptions.del(activeSubscription.id);
+        return res.send({ success: true, subscription: canceledSubscription });
+      } else {
+        return res.status(400).send({ error: { message: 'No active subscription found.' } });
+      }
+    } else {
+      return res.status(400).send({ error: { message: 'Customer not found.' } });
+    }
+  } catch (error) {
+    console.error('Error canceling subscription:', error.message);
+    res.status(500).send({ error: { message: 'Failed to cancel subscription', details: error.message } });
   }
 };
