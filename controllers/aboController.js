@@ -17,7 +17,6 @@ exports.getProductsAndPrices = async (req, res) => {
     }
 };
 
-
 exports.createCheckoutSession = async (req, res) => {
   const { email, name, priceId } = req.body;
   console.log('Received request to create checkout session for email:', email, 'name:', name, 'priceId:', priceId);
@@ -35,6 +34,18 @@ exports.createCheckoutSession = async (req, res) => {
     if (existingCustomers.data.length > 0) {
       customer = existingCustomers.data[0];
       console.log('Using existing customer:', customer.id);
+
+      // Check for active subscription
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'active',
+        limit: 1
+      });
+
+      if (subscriptions.data.length > 0) {
+        console.log('Customer already has an active subscription:', subscriptions.data[0].id);
+        return res.status(400).send({ error: { message: 'You already have an active subscription.' } });
+      }
     } else {
       customer = await stripe.customers.create({ email, name });
       console.log('New customer created:', customer.id);
@@ -70,9 +81,6 @@ exports.createCheckoutSession = async (req, res) => {
   }
 };
 
-
-
-
 exports.checkActiveSubscription = async (req, res) => {
   const { email } = req.body;
 
@@ -107,4 +115,3 @@ exports.checkActiveSubscription = async (req, res) => {
       res.status(400).send({ error: { message: error.message } });
   }
 };
-
