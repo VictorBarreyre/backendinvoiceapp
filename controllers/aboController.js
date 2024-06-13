@@ -102,12 +102,20 @@ exports.checkActiveSubscription = async (req, res) => {
         status: 'active',
         limit: 1
       });
+      
+      console.log('Subscriptions found:', subscriptions.data);
 
       if (subscriptions.data.length > 0) {
         const activeSubscription = subscriptions.data[0];
         console.log('Customer already has an active subscription:', activeSubscription.id);
         return res.send({ hasActiveSubscription: true, subscription: activeSubscription });
+      } else {
+        console.log('No active subscriptions found.');
+        return res.send({ hasActiveSubscription: false });
       }
+      
+    } else {
+      console.log('No customer found with this email.');
     }
 
     res.send({ hasActiveSubscription: false });
@@ -116,6 +124,7 @@ exports.checkActiveSubscription = async (req, res) => {
     res.status(400).send({ error: { message: error.message } });
   }
 };
+
 
 
 exports.cancelSubscription = async (req, res) => {
