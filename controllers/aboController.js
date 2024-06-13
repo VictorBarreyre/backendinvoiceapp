@@ -126,7 +126,6 @@ exports.checkActiveSubscription = async (req, res) => {
 };
 
 
-
 exports.cancelSubscription = async (req, res) => {
   const { email } = req.body;
 
@@ -136,6 +135,7 @@ exports.cancelSubscription = async (req, res) => {
   }
 
   try {
+    console.log('Fetching customer by email:', email);
     const existingCustomers = await stripe.customers.list({ email });
     let customer;
 
@@ -143,6 +143,7 @@ exports.cancelSubscription = async (req, res) => {
       customer = existingCustomers.data[0];
       console.log('Using existing customer:', customer.id);
 
+      console.log('Fetching active subscriptions for customer:', customer.id);
       const subscriptions = await stripe.subscriptions.list({
         customer: customer.id,
         status: 'active',
@@ -153,16 +154,20 @@ exports.cancelSubscription = async (req, res) => {
         const activeSubscription = subscriptions.data[0];
         console.log('Canceling subscription:', activeSubscription.id);
 
+        // Utilisez stripe.subscriptions.del pour annuler la souscription
         const canceledSubscription = await stripe.subscriptions.del(activeSubscription.id);
+        console.log('Subscription canceled:', canceledSubscription.id);
         return res.send({ success: true, subscription: canceledSubscription });
       } else {
+        console.log('No active subscription found.');
         return res.status(400).send({ error: { message: 'No active subscription found.' } });
       }
     } else {
+      console.log('Customer not found.');
       return res.status(400).send({ error: { message: 'Customer not found.' } });
     }
   } catch (error) {
-    console.error('Error canceling subscription:', error.message);
+    console.error('Error canceling subscription:', error.message, error.stack);
     res.status(500).send({ error: { message: 'Failed to cancel subscription', details: error.message } });
   }
 };
