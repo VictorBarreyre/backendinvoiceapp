@@ -293,3 +293,34 @@ exports.verifyPassword = expressAsyncHandler(async (req, res) => {
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 });
+
+exports.changePassword = expressAsyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.userData.id; // Assurez-vous que le middleware d'authentification ajoute userData à la requête
+
+  console.log(`Received request to change password for user ID: ${userId}`);
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log('User not found');
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      console.log('Current password does not match');
+      return res.status(401).json({ message: 'Mot de passe actuel incorrect' });
+    }
+
+    console.log('Current password matched. Proceeding to change password.');
+    user.password = newPassword;
+    await user.save();
+
+    console.log('Password changed successfully');
+    res.json({ message: 'Mot de passe changé avec succès' });
+  } catch (error) {
+    console.error('Error in changePassword:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+});
