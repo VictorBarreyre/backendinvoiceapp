@@ -30,5 +30,7 @@ router.delete('/:id', authenticate, userController.deleteUser);
 // Route pour vérifier si un utilisateur existe
 router.post('/check', userController.checkUserExists);
 
+router.post('/verify-password', userController.verifyPassword);
+
 
 module.exports = router;

@@ -271,3 +271,25 @@ exports.deleteUser = expressAsyncHandler(async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la suppression de l'utilisateur", error: error.message });
   }
 });
+
+
+exports.verifyPassword = expressAsyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Mot de passe incorrect' });
+    }
+
+    res.status(200).json({ success: true, message: 'Mot de passe vérifié' });
+  } catch (error) {
+    console.error('Error in verifyPassword:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+});
