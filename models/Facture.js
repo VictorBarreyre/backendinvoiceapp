@@ -36,7 +36,11 @@ const factureSchema = new mongoose.Schema({
     siret: String,
     email: String,
   },
-  // Vous pouvez ajouter d'autres champs selon vos besoins
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  }
 });
 
 module.exports = mongoose.model('Facture', factureSchema);

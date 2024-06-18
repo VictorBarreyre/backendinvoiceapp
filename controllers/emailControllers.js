@@ -70,6 +70,7 @@ const convertPdfToPng = (pdfPath) => {
 
 
 const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
+  console.log("User in request:", req.userData); // Ajoutez ce log pour vérifier l'utilisateur
   const { email, subject, message, montant, factureId } = req.body;
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
@@ -91,6 +92,7 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
       status: 'en attente',
       emetteur,
       destinataire,
+      userId: req.userData.id, // Utilisez req.userData.id ici
     });
 
     await nouvelleFacture.save();
@@ -109,7 +111,6 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
-   
 
     res.send({
       message: "Email envoyé avec succès à " + email,
@@ -121,6 +122,7 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
     res.status(500).send("Erreur lors de la création de la facture ou de l'envoi de l'email: " + error.message);
   }
 });
+
 
 const getFactureDetails = expressAsyncHandler(async (req, res) => {
   const { factureId } = req.params;

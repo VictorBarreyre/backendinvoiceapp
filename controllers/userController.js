@@ -144,12 +144,14 @@ exports.getUserInvoices = expressAsyncHandler(async (req, res) => {
 
   // Trouver toutes les factures associées à cet utilisateur
   const invoices = await Invoice.find({ userId: userId });
-  if (!invoices) {
+  console.log('Factures récupérées :', invoices); // Ajoutez ce log pour vérifier les factures
+  if (!invoices.length) {
     return res.status(404).json({ message: 'Pas de factures trouvées pour cet utilisateur' });
   }
 
   res.json(invoices);
 });
+
 
 exports.updateUser = expressAsyncHandler(async (req, res) => {
   const { id } = req.params;
