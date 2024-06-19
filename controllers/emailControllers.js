@@ -92,7 +92,7 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
       status: 'en attente',
       emetteur,
       destinataire,
-      userId: req.userData.id, // Utilisez req.userData.id ici
+      userId: req.userData ? req.userData.id : null, // Gérer le cas des utilisateurs non connectés
     });
 
     await nouvelleFacture.save();

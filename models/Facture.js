@@ -39,7 +39,7 @@ const factureSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false // Rendre optionnel pour les utilisateurs non connectés
   }
 });
 

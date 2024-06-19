@@ -134,22 +134,20 @@ exports.getUser = expressAsyncHandler(async (req, res) => {
 });
 
 exports.getUserInvoices = expressAsyncHandler(async (req, res) => {
-  const userId = req.params.id;
-
-  // Vérifiez si l'utilisateur existe
-  const user = await User.findById(userId);
-  if (!user) {
-    return res.status(404).json({ message: 'Utilisateur non trouvé' });
+  if (!req.userData) {
+    console.log('Utilisateur non authentifié');
+    return res.status(401).json({ message: 'Utilisateur non authentifié' });
   }
 
-  // Trouver toutes les factures associées à cet utilisateur
-  const invoices = await Invoice.find({ userId: userId });
-  console.log('Factures récupérées :', invoices); // Ajoutez ce log pour vérifier les factures
-  if (!invoices.length) {
-    return res.status(404).json({ message: 'Pas de factures trouvées pour cet utilisateur' });
+  try {
+    console.log('Recherche des factures pour:', req.userData.email);
+    const invoices = await Invoice.find({ 'emetteur.email': req.userData.email });
+    console.log('Factures trouvées:', invoices);
+    res.json(invoices);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des factures:', error);
+    res.status(500).send("Erreur lors de la récupération des factures");
   }
-
-  res.json(invoices);
 });
 
 

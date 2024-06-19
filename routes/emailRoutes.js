@@ -12,8 +12,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Utilisation de GET pour la génération de factureId
 router.get("/generateFactureId", generateFactureId);
 
-// Utilisez la fonction correcte pour la route d'envoi d'email et incluez Multer pour le fichier
-router.post("/sendEmail",authenticate, upload.single('file'), createFactureAndSendEmail);
+router.post("/sendEmail", upload.single('file'), createFactureAndSendEmail);
 
 router.get('/details/:factureId', getFactureDetails);
 

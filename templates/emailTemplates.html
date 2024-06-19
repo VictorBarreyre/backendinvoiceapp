@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      padding: 20px;
+      background-color: white;
+      margin: 20px auto;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .content {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #888;
+    }
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      margin-top: 20px;
+      color: white;
+      background-color: #007bff;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">Votre Facture</div>
+    <div class="content">
+      <p>Cher {clientName},</p>
+      <p>Veuillez trouver ci-joint votre facture n° {invoiceNumber}.</p>
+      <p>Pour confirmer votre accord et signer électroniquement le contrat, veuillez cliquer sur le lien ci-dessous :</p>
+      <a href="{confirmationLink}" class="button">Confirmer et Signer</a>
+    </div>
+    <div class="footer">
+      <p>Nous vous remercions pour votre confiance et restons à votre disposition pour toute information complémentaire.</p>
+      <p>Cordialement,</p>
+      <p>{issuerName}</p>
+    </div>
+  </div>
+</body>
+</html>
