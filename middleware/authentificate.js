@@ -1,14 +1,13 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-
   if (!authHeader) {
     return res.status(401).json({ message: 'Auth token is missing' });
   }
 
   const tokenParts = authHeader.split(' ');
-
   if (tokenParts.length !== 2 || tokenParts[0] !== 'Bearer') {
     return res.status(401).json({ message: 'Bearer token is missing or malformed' });
   }
@@ -17,7 +16,11 @@ const authenticate = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userData = decoded;
+    const user = await User.findById(decoded.id).select('email');
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+    req.userData = { id: decoded.id, email: user.email };
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
