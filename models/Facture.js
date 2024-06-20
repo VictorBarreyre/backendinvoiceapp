@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const factureSchema = new mongoose.Schema({
   number: {
     type: String,
-    required:false,
+    required:true,
   },
   factureId: {
     type: String,
@@ -17,6 +17,10 @@ const factureSchema = new mongoose.Schema({
   montant: {
     type: Number,
     required: true,
+  },
+  devise: {
+    type: String,
+    required:true,
   },
   status: {
     type: String,
