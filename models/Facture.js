@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const factureSchema = new mongoose.Schema({
+  number: {
+    type: String,
+    required:false,
+  },
   factureId: {
     type: String,
     required: true,

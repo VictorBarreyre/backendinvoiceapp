@@ -71,7 +71,7 @@ const convertPdfToPng = (pdfPath) => {
 
 const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
   console.log("User in request:", req.userData); // Ajoutez ce log pour vérifier l'utilisateur
-  const { email, subject, message, montant, factureId } = req.body;
+  const { number, email, subject, message, montant, factureId } = req.body;
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
 
@@ -86,6 +86,7 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
     const urlImage = `http://localhost:8000/images/${imageName}`;
 
     const nouvelleFacture = new Facture({
+      number,
       factureId,
       urlImage,
       montant,
@@ -130,6 +131,7 @@ const getFactureDetails = expressAsyncHandler(async (req, res) => {
 
   if (facture) {
     res.json({
+      number:facture.number,
       factureId: facture.factureId,
       urlImage: facture.urlImage,
       montant: facture.montant,
