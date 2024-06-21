@@ -71,7 +71,7 @@ const convertPdfToPng = (pdfPath) => {
 
 const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
   console.log("User in request:", req.userData); // Ajoutez ce log pour vérifier l'utilisateur
-  const { number, email, subject, message, montant, factureId } = req.body;
+  const { number, email, subject, message, montant, factureId, devise } = req.body;
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
 
@@ -99,11 +99,23 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
 
     await nouvelleFacture.save();
 
+    // Lire le template HTML
+    const templatePath = path.join(__dirname, '../templates/emailTemplates.html');
+    let template = fs.readFileSync(templatePath, 'utf-8');
+
+    // Remplacer les espaces réservés avec les données dynamiques
+    template = template.replace('{{number}}', number)
+                       .replace('{{clientName}}', destinataire.name)
+                       .replace('{{montant}}', montant)
+                       .replace('{{devise}}', devise)
+                       .replace('{{issuerName}}', emetteur.name)
+                       .replace('{{confirmationLink}}', `http://localhost:5173/confirmation?facture=${factureId}&montant=${montant}`);
+
     const mailOptions = {
       from: process.env.SMTP_MAIL,
       to: email,
       subject: subject,
-      text: message,
+      html: template, // Utiliser le template HTML stylisé
       attachments: [
         {
           filename: req.file.originalname,
