@@ -36,4 +36,6 @@ router.post('/verify-password', userController.verifyPassword);
 // Route pour la deuxième fonction de réinitialisation de mot de passe
 router.post('/change-password', authenticate, userController.changePassword);
 
+router.get('/download-data', authenticate, userController.downloadUserData); 
+
 module.exports = router;

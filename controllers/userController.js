@@ -324,3 +324,50 @@ exports.changePassword = expressAsyncHandler(async (req, res) => {
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 });
+
+exports.downloadUserData = expressAsyncHandler(async (req, res) => {
+  const userId = req.userData.id;
+
+  try {
+    // Récupérer les informations utilisateur
+    const user = await User.findById(userId).select('-password -token -__v');
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    // Récupérer les factures associées
+    const invoices = await Invoice.find({ 'emetteur.email': user.email });
+
+    // Créer un objet avec les données utilisateur et les factures
+    const userData = {
+      user: user.toObject(),
+      invoices: invoices.map(invoice => invoice.toObject())
+    };
+
+    // Convertir l'objet en chaîne JSON
+    const jsonString = JSON.stringify(userData, null, 2);
+
+    // Définir le nom du fichier
+    const fileName = `user-data-${user._id}.json`;
+
+    // Créer un fichier temporaire pour stocker les données
+    const filePath = path.join(__dirname, '..', 'tmp', fileName);
+    fs.writeFileSync(filePath, jsonString);
+
+    // Envoyer le fichier en tant que téléchargement
+    res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+    res.setHeader('Content-Type', 'application/json');
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        res.status(500).json({ message: 'Erreur lors de l\'envoi du fichier' });
+      } else {
+        // Supprimer le fichier temporaire après l'envoi
+        fs.unlinkSync(filePath);
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors du téléchargement des données utilisateur:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+});
