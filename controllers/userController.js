@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const expressAsyncHandler = require('express-async-handler');
 const nodemailer = require('nodemailer');
 const Invoice = require('../models/Facture');
+const path = require('path'); 
+const fs = require('fs');
 
 // Créez un transporteur nodemailer
 let transporter = nodemailer.createTransport({
@@ -329,14 +331,21 @@ exports.downloadUserData = expressAsyncHandler(async (req, res) => {
   const userId = req.userData.id;
 
   try {
+    console.log(`Starting downloadUserData for user ID: ${userId}`);
+
     // Récupérer les informations utilisateur
     const user = await User.findById(userId).select('-password -token -__v');
     if (!user) {
+      console.log('User not found');
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
+    console.log('User found:', user);
+
     // Récupérer les factures associées
     const invoices = await Invoice.find({ 'emetteur.email': user.email });
+
+    console.log('Invoices found:', invoices);
 
     // Créer un objet avec les données utilisateur et les factures
     const userData = {
@@ -350,9 +359,18 @@ exports.downloadUserData = expressAsyncHandler(async (req, res) => {
     // Définir le nom du fichier
     const fileName = `user-data-${user._id}.json`;
 
+    // Vérifier et créer le dossier temporaire si nécessaire
+    const tmpDir = path.join(__dirname, '..', 'tmp');
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir);
+      console.log('Temporary directory created');
+    }
+
     // Créer un fichier temporaire pour stocker les données
-    const filePath = path.join(__dirname, '..', 'tmp', fileName);
+    const filePath = path.join(tmpDir, fileName);
     fs.writeFileSync(filePath, jsonString);
+
+    console.log(`File created at ${filePath}`);
 
     // Envoyer le fichier en tant que téléchargement
     res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
@@ -364,6 +382,7 @@ exports.downloadUserData = expressAsyncHandler(async (req, res) => {
       } else {
         // Supprimer le fichier temporaire après l'envoi
         fs.unlinkSync(filePath);
+        console.log(`File ${filePath} deleted after sending`);
       }
     });
   } catch (error) {
