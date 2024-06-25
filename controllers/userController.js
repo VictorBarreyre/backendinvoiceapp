@@ -390,3 +390,15 @@ exports.downloadUserData = expressAsyncHandler(async (req, res) => {
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 });
+
+exports.deleteInvoices = expressAsyncHandler(async (req, res) => {
+  const { invoiceIds } = req.body;
+
+  try {
+    await Invoice.deleteMany({ _id: { $in: invoiceIds } });
+    res.status(200).json({ message: 'Factures supprimées avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression des factures:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+});
