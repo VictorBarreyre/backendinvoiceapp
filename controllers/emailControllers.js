@@ -71,7 +71,7 @@ const convertPdfToPng = (pdfPath) => {
 
 const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
   console.log("User in request:", req.userData); // Ajoutez ce log pour vérifier l'utilisateur
-  const { number, email, subject, message, montant, factureId, devise } = req.body;
+  const { number, email, subject, montant, factureId, devise } = req.body;
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
 
@@ -99,23 +99,14 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
 
     await nouvelleFacture.save();
 
-    // Lire le template HTML
-    const templatePath = path.join(__dirname, '../templates/emailTemplates.html');
-    let template = fs.readFileSync(templatePath, 'utf-8');
-
-    // Remplacer les espaces réservés avec les données dynamiques
-    template = template.replace('{{number}}', number)
-                       .replace('{{clientName}}', destinataire.name)
-                       .replace('{{montant}}', montant)
-                       .replace('{{devise}}', devise)
-                       .replace('{{issuerName}}', emetteur.name)
-                       .replace('{{confirmationLink}}', `http://localhost:5173/confirmation?facture=${factureId}&montant=${montant}`);
+    const confirmationLink = `http://localhost:5173/confirmation?facture=${factureId}&montant=${montant}`;
+    const messageEmail = `Cher ${destinataire.name},\n\nVeuillez trouver ci-joint votre facture n° ${number}.\n\nPour confirmer votre accord et signer électroniquement le contrat, veuillez cliquer sur le lien ci-dessous :\n\n${confirmationLink}\n\nNous vous remercions pour votre confiance et restons à votre disposition pour toute information complémentaire.\n\nCordialement,\n${emetteur.name}`;
 
     const mailOptions = {
       from: process.env.SMTP_MAIL,
       to: email,
       subject: subject,
-      html: template, // Utiliser le template HTML stylisé
+      text: messageEmail, // Utiliser le message email généré
       attachments: [
         {
           filename: req.file.originalname,
@@ -136,6 +127,8 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
     res.status(500).send("Erreur lors de la création de la facture ou de l'envoi de l'email: " + error.message);
   }
 });
+
+
 
 
 const getFactureDetails = expressAsyncHandler(async (req, res) => {
