@@ -391,14 +391,21 @@ exports.downloadUserData = expressAsyncHandler(async (req, res) => {
   }
 });
 
-exports.deleteInvoices = expressAsyncHandler(async (req, res) => {
-  const { invoiceIds } = req.body;
+// Ajoutez cette fonction à la fin du fichier userController.js
+exports.deleteInvoice = expressAsyncHandler(async (req, res) => {
+  const { invoiceId } = req.body;
 
   try {
-    await Invoice.deleteMany({ _id: { $in: invoiceIds } });
-    res.status(200).json({ message: 'Factures supprimées avec succès' });
+    const invoice = await Invoice.findById(invoiceId);
+
+    if (!invoice) {
+      return res.status(404).json({ message: 'Facture non trouvée' });
+    }
+
+    await invoice.deleteOne();
+    res.status(200).json({ message: 'Facture supprimée avec succès' });
   } catch (error) {
-    console.error('Erreur lors de la suppression des factures:', error);
+    console.error('Erreur lors de la suppression de la facture:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 });
@@ -419,6 +426,28 @@ exports.markInvoiceAsPaid = expressAsyncHandler(async (req, res) => {
     await invoice.save();
 
     res.status(200).json({ message: 'Facture marquée comme payée', invoice });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la facture:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+});
+
+
+// Ajoutez cette fonction à la fin du fichier userController.js
+exports.markInvoiceAsUnpaid = expressAsyncHandler(async (req, res) => {
+  const { invoiceId } = req.body;
+
+  try {
+    const invoice = await Invoice.findById(invoiceId);
+
+    if (!invoice) {
+      return res.status(404).json({ message: 'Facture non trouvée' });
+    }
+
+    invoice.status = 'en attente';
+    await invoice.save();
+
+    res.status(200).json({ message: 'Facture marquée comme non traitée', invoice });
   } catch (error) {
     console.error('Erreur lors de la mise à jour de la facture:', error);
     res.status(500).json({ message: 'Erreur interne du serveur' });
