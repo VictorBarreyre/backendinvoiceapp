@@ -9,6 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
+const cron = require('node-cron');
+const moment = require('moment');
 
 dotenv.config();
 
@@ -21,6 +23,46 @@ let transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASSWORD,
   },
 });
+
+
+// Planifier une tâche cron pour vérifier les factures toutes les minutes
+cron.schedule('* * * * *', async () => {
+  const now = new Date();
+
+  try {
+    // Trouver toutes les factures dont la date de prochaine relance est maintenant ou avant et qui sont toujours "en attente"
+    const factures = await Facture.find({ nextReminderDate: { $lte: now }, status: 'en attente' });
+
+    for (const facture of factures) {
+      // Lire le template HTML pour l'email de relance
+      const templatePath = path.join(__dirname, '../templates/relance.html');
+      let template = fs.readFileSync(templatePath, 'utf-8');
+      template = template.replace('{clientName}', facture.destinataire.name)
+                         .replace('{invoiceNumber}', facture.number)
+                         .replace('{confirmationLink}', `http://localhost:5173/confirmation?facture=${facture.factureId}&montant=${facture.montant}`)
+                         .replace('{issuerName}', facture.emetteur.name);
+
+      // Envoyer l'email de relance
+      const mailOptions = {
+        from: process.env.SMTP_MAIL,
+        to: facture.destinataire.email,
+        subject: 'Rappel de paiement pour la facture n°' + facture.number,
+        html: template
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      // Mettre à jour la date de prochaine relance
+      facture.nextReminderDate = moment(facture.nextReminderDate).add(1, 'minutes').toDate(); // 1 minute pour les tests
+      await facture.save();
+
+      console.log('Rappel envoyé pour la facture n°', facture.number);
+    }
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi des rappels :', error);
+  }
+});
+
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -70,7 +112,7 @@ const convertPdfToPng = (pdfPath) => {
 
 
 const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
-  console.log("User in request:", req.userData); // Ajoutez ce log pour vérifier l'utilisateur
+  console.log("User in request:", req.userData);
   const { number, email, subject, montant, factureId, devise } = req.body;
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
@@ -94,12 +136,12 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
       status: 'en attente',
       emetteur,
       destinataire,
-      userId: req.userData ? req.userData.id : null, // Gérer le cas des utilisateurs non connectés
+      userId: req.userData ? req.userData.id : null,
+      nextReminderDate: new Date(Date.now() + 1 * 60 * 1000) // 1 minute à partir de maintenant
     });
 
     await nouvelleFacture.save();
 
-    // Lire le template HTML
     const templatePath = path.join(__dirname, '../templates/emailTemplates.html');
     let template = fs.readFileSync(templatePath, 'utf-8');
 
@@ -109,12 +151,11 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
                        .replace('{confirmationLink}', confirmationLink)
                        .replace('{issuerName}', emetteur.name);
     
-
     const mailOptions = {
       from: process.env.SMTP_MAIL,
       to: email,
       subject: subject,
-      html: template, // Utiliser le template HTML stylisé
+      html: template,
       attachments: [
         {
           filename: req.file.originalname,
@@ -135,6 +176,8 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
     res.status(500).send("Erreur lors de la création de la facture ou de l'envoi de l'email: " + error.message);
   }
 });
+
+
 
 
 

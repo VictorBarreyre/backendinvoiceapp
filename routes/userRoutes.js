@@ -22,4 +22,7 @@ router.delete('/:id', authenticate, userController.deleteUser);
 // Route pour supprimer les factures
 router.post('/delete-invoices', authenticate, userController.deleteInvoices);
 
+// Nouvelle route pour marquer la facture comme payée
+router.post('/mark-invoice-paid', authenticate, userController.markInvoiceAsPaid);
+
 module.exports = router;

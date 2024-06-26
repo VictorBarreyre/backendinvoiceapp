@@ -48,6 +48,10 @@ const factureSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: false // Rendre optionnel pour les utilisateurs non connectés
+  },
+  nextReminderDate: {
+    type: Date,
+    default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours à partir de maintenant
   }
 });
 

@@ -402,3 +402,25 @@ exports.deleteInvoices = expressAsyncHandler(async (req, res) => {
     res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 });
+
+
+// Ajoutez cette fonction à la fin du fichier userController.js
+exports.markInvoiceAsPaid = expressAsyncHandler(async (req, res) => {
+  const { invoiceId } = req.body;
+
+  try {
+    const invoice = await Invoice.findById(invoiceId);
+
+    if (!invoice) {
+      return res.status(404).json({ message: 'Facture non trouvée' });
+    }
+
+    invoice.status = 'paid';
+    await invoice.save();
+
+    res.status(200).json({ message: 'Facture marquée comme payée', invoice });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la facture:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+});
