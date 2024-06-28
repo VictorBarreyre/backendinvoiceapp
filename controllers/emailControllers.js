@@ -25,7 +25,6 @@ let transporter = nodemailer.createTransport({
 });
 
 
-// Planifier une tâche cron pour vérifier les factures toutes les minutes
 cron.schedule('* * * * *', async () => {
   const now = new Date();
 
@@ -53,7 +52,7 @@ cron.schedule('* * * * *', async () => {
       await transporter.sendMail(mailOptions);
 
       // Mettre à jour la date de prochaine relance
-      facture.nextReminderDate = moment(facture.nextReminderDate).add(1, 'minutes').toDate(); // 1 minute pour les tests
+      facture.nextReminderDate = moment(facture.nextReminderDate).add(facture.reminderFrequency, 'days').toDate(); // Utiliser la fréquence de relance
       await facture.save();
 
       console.log('Rappel envoyé pour la facture n°', facture.number);
@@ -62,6 +61,7 @@ cron.schedule('* * * * *', async () => {
     console.error('Erreur lors de l\'envoi des rappels :', error);
   }
 });
+
 
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -113,7 +113,7 @@ const convertPdfToPng = (pdfPath) => {
 
 const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
   console.log("User in request:", req.userData);
-  const { number, email, subject, montant, factureId, devise } = req.body;
+  const { number, email, subject, montant, factureId, devise, reminderFrequency } = req.body;
   const emetteur = JSON.parse(req.body.emetteur);
   const destinataire = JSON.parse(req.body.destinataire);
 
@@ -137,7 +137,8 @@ const createFactureAndSendEmail = expressAsyncHandler(async (req, res) => {
       emetteur,
       destinataire,
       userId: req.userData ? req.userData.id : null,
-      nextReminderDate: new Date(Date.now() + 1 * 60 * 1000) // 1 minute à partir de maintenant
+      nextReminderDate: new Date(Date.now() + reminderFrequency * 24 * 60 * 60 * 1000), // Utiliser la fréquence de relance
+      reminderFrequency: Number(reminderFrequency), // Stocker la fréquence de relance
     });
 
     await nouvelleFacture.save();
