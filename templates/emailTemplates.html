@@ -3,7 +3,7 @@
 <head>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Helvetica', Arial, sans-serif;
       margin: 0;
       padding: 0;
       background-color: #f4f4f4;
@@ -16,13 +16,15 @@
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
     .header {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: bold;
       margin-bottom: 20px;
     }
     .content {
       font-size: 16px;
       line-height: 1.6;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid #f2f2f2;
     }
     .footer {
       margin-top: 20px;
@@ -33,26 +35,47 @@
       display: inline-block;
       padding: 10px 20px;
       margin-top: 20px;
-      color: white;
-      background-color: #745FF2;
+      color: white !important;
+      background-color: #000000;
       text-decoration: none;
-      border-radius: 5px;
+      border-radius: 30px;
     }
+    .logo {
+      display: block;
+      margin: 0 auto 20px auto;
+      max-width: 200px; /* Ajustez la taille du logo selon vos besoins */
+    }
+    .signature {
+      margin-top: 40px;
+      font-size: 16px;
+      font-style: italic;
+      color: #333;
+    }
+    .signature-logo {
+      display: block;
+      margin: 20px auto 0 auto;
+    
+    }
+
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">Votre Facture</div>
+    <div class="header">Voici votre Facture</div>
     <div class="content">
       <p>Cher {clientName},</p>
       <p>Veuillez trouver ci-joint votre facture n°{invoiceNumber}.</p>
-      <p>Pour confirmer votre accord et signer électroniquement le contrat, veuillez cliquer sur le lien ci-dessous :</p>
+      <p>Afin d'informer, veuillez cliquer sur le lien ci-dessous :</p>
       <a href="{confirmationLink}" class="button">Confirmer et Signer</a>
     </div>
     <div class="footer">
       <p>Nous vous remercions pour votre confiance et restons à votre disposition pour toute information complémentaire.</p>
       <p>Cordialement,</p>
       <p>{issuerName}</p>
+      <div class="signature">
+        <p>--<br/>Service proposé par</p> <!-- Ajoutez votre signature ici -->
+        <img src="http://localhost:8000/public/images/logo/db-logo.png" alt="Signature Logo" class="signature-logo" /> <!-- Logo de signature -->
+      </div>
     </div>
   </div>
 </body>

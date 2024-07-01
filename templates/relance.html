@@ -1,15 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rappel de Facture</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rappel de Facture</title>
+  <style>
+     body {
+        font-family: 'Helvetica', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      padding: 20px;
+      background-color: white;
+      margin: 20px auto;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .content {
+      font-size: 16px;
+      line-height: 1.6;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid #f2f2f2;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #888;
+    }
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      margin-top: 20px;
+      color: white !important;
+      background-color: #000000;
+      text-decoration: none;
+      border-radius: 30px;
+    }
+    .logo {
+      display: block;
+      margin: 0 auto 20px auto;
+      max-width: 200px; /* Ajustez la taille du logo selon vos besoins */
+    }
+    .signature {
+      margin-top: 40px;
+      font-size: 16px;
+      font-style: italic;
+      text-align: center;
+      color: #333;
+    }
+    .signature-logo {
+      display: block;
+      margin: 20px auto 0 auto;
+      max-width: 150px; /* Ajustez la taille du logo selon vos besoins */
+    }
+
+  </style>
 </head>
 <body>
-    <p>Bonjour {clientName},</p>
-    <p>Nous vous rappelons que la facture n°{invoiceNumber} est toujours en attente de paiement.</p>
-    <p>Veuillez cliquer sur le lien suivant pour confirmer le paiement : <a href="{confirmationLink}">Confirmer le paiement</a></p>
-    <p>Merci,</p>
-    <p>{issuerName}</p>
+  <div class="container">
+    <div class="header">Rappel de Facture</div>
+    <div class="content">
+      <p>Bonjour {clientName},</p>
+      <p>Nous vous rappelons que la facture n°{invoiceNumber} est toujours en attente de paiement.</p>
+      <p>Veuillez cliquer sur le lien suivant pour confirmer le paiement :</p>
+      <a href="{confirmationLink}" class="button">Confirmer le paiement</a>
+    </div>
+    <div class="footer">
+      <p>Merci,</p>
+      <p>{issuerName}</p>
+      <div class="signature">
+        <p>--<br/>Votre Équipe dbill.io</p> <!-- Ajoutez votre signature ici -->
+        <img src="http://localhost:8000/public/images/logo/signature-logo.png" alt="Signature Logo" class="signature-logo" /> <!-- Logo de signature -->
+      </div>
+    </div>
+  </div>
 </body>
 </html>

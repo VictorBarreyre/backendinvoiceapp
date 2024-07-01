@@ -8,6 +8,7 @@ const aboRoutes = require('./routes/aboRoutes'); // Importez le routeur des abon
 const mongoose = require('mongoose');
 const cors = require('cors');
 const User = require('./models/User'); // Importez le modèle User
+const path = require('path');
 
 dotenv.config();
 
@@ -18,6 +19,8 @@ app.use(cors({
   origin: 'http://localhost:5173' // Autoriser uniquement les requêtes de ce domaine
 }));
 app.use(express.static('public'));
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Routes
