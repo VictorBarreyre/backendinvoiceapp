@@ -19,7 +19,10 @@ app.use(cors({
   origin: 'http://localhost:5173' // Autoriser uniquement les requêtes de ce domaine
 }));
 app.use(express.static('public'));
-app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/public', express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d', // Cache assets for 1 day
+  etag: false
+}));
 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -49,7 +52,7 @@ async function fetchUsers() {
   }
 }
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
